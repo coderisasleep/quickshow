@@ -20,6 +20,7 @@ app.use(clerkMiddleware())
 app.get('/', (req,res)=> res.send('Server is Live!'))
 app.use('/api/inngest', serve({client:inngest,functions}))
 app.use('/api/show', showRouter)
+app.use()
 
 if (process.env.VERCEL !== "1") {
     app.listen(port, ()=> console.log(`Server listening at http://localhost:${port}`));
