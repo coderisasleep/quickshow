@@ -23,32 +23,43 @@ export const updateFavourite = async(req,res) =>{
     try{
         const {movieId} = req.body;
         const userId = req.auth().userId;
+        if(!userId){
+            return res.status(401).json({success:false,message:"Authentication required"})
+        }
+        if(typeof movieId !== 'string' || !movieId){
+            return res.status(400).json({success:false,message:"Movie ID is required"})
+        }
 
         const user = await clerkClient.users.getUser(userId)
+        const favourites = Array.isArray(user.privateMetadata?.favourites)
+            ? [...user.privateMetadata.favourites]
+            : []
 
-        if(!user.privateMetadata.favourites){
-            user.privateMetadata.favourites=[]
-        }
+        const updatedFavourites = favourites.includes(movieId)
+            ? favourites.filter(item=> item !== movieId)
+            : [...favourites,movieId]
 
-        if(!user.privateMetadata.favourites.includes(movieId)){
-            user.privateMetadata.favourites.push(movieId)
-        }else{
-            user.privateMetadata.favourites = user.privateMetadata.favourites.filter(item=> item !== movieId)
-        }
-
-        await clerkClient.users.updateUserMetadata(userId,{privateMetadata:user.privateMetadata})
-        res.json({success:true, message:"Faviourite movies updated"})
+        await clerkClient.users.updateUserMetadata(userId,{
+            privateMetadata:{...user.privateMetadata,favourites:updatedFavourites}
+        })
+        res.json({success:true, message:"Favourite movies updated"})
     }catch(error){
-        console.error(error.message);
-        res.join({success:false,message:error.message});
+        console.error(error);
+        res.status(500).json({success:false,message:error.message})
     }
 }
 
 export const getFavourites = async(req,res) =>{
     try{
-       const user = await clerkClient.users.getUser(req.auth().userId)
-       const favourites = user.privateMetadata.favourites;
+       const userId = req.auth().userId
+       if(!userId){
+         return res.status(401).json({success:false,message:"Authentication required"})
+       }
 
+       const user = await clerkClient.users.getUser(userId)
+       const favourites = Array.isArray(user.privateMetadata?.favourites)
+         ? user.privateMetadata.favourites
+         : []
        //getting movies from database
        const movies = await Movie.find({_id: {$in: favourites} })
 
@@ -56,7 +67,7 @@ export const getFavourites = async(req,res) =>{
 
 
     }catch(error){
-        console.error(error.message);
-        res.join({success:false,message:error.message});
+        console.error(error);
+        res.status(500).json({success:false,message:error.message})
     }
 }

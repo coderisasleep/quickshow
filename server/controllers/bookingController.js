@@ -1,3 +1,4 @@
+import { inngest } from "../inngest/index.js";
 import Booking from "../model/Booking.js";
 import Show from "../model/Show.js"
 import stripe from "stripe"
@@ -73,7 +74,7 @@ export const createBooking = async (req,res) =>{
         }]
 
         const session = await stripeInstance.checkout.sessions.create({
-            success_url: `${origin}/loading/my-bookings`,
+            success_url: `${origin}/my-bookings?session_id={CHECKOUT_SESSION_ID}`,
             cancel_url : `${origin}/my-bookings`,
             line_items: line_items,
             mode:"payment",
@@ -87,13 +88,60 @@ export const createBooking = async (req,res) =>{
         booking.paymentLink = session.url
         await booking.save()
 
+        //run inngest scheduler function to check payment status after 10 minutes
+        await inngest.send({
+            name:"app/checkpayment",
+            data:{
+                bookingId: booking._id.toString()
 
+            }
+
+        })
 
        res.json({success:true, url: session.url})
 
     }catch(error){
         console.error(error.message);
         res.status(500).json({success:false, message:error.message})
+    }
+}
+
+export const confirmBookingPayment = async(req,res) =>{
+    try{
+       const {userId} = req.auth();
+       if(!userId){
+         return res.status(401).json({success:false,message:"Authentication required"})
+       }
+
+       const {sessionId} = req.body;
+       if(typeof sessionId !== 'string' || !sessionId){
+         return res.status(400).json({success:false,message:"Checkout session ID is required"})
+       }
+
+       const stripeInstance = new stripe(process.env.STRIPE_SECRET_KEY)
+       const session = await stripeInstance.checkout.sessions.retrieve(sessionId)
+       const bookingId = session.metadata?.bookingId
+       if(!bookingId){
+         return res.status(404).json({success:false,message:"No booking is associated with this payment"})
+       }
+
+       const booking = await Booking.findOne({_id:bookingId,user:userId})
+       if(!booking){
+         return res.status(404).json({success:false,message:"Booking not found"})
+       }
+
+       if(session.payment_status !== 'paid'){
+         return res.status(409).json({success:false,message:"Payment has not been completed"})
+       }
+
+       booking.isPaid = true
+       booking.paymentLink = ""
+       await booking.save()
+
+       res.json({success:true,isPaid:true})
+    }catch(error){
+        console.error(error)
+        res.status(500).json({success:false,message:error.message})
     }
 }
 
