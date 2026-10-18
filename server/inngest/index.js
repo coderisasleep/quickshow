@@ -33,16 +33,30 @@ const syncUserDeletion = inngest.createFunction(
 //Inngest Function to update user data in Database
 const syncUserUpdation = inngest.createFunction(
     {id:'update-user-from-clerk', triggers: {event:'clerk/user.updated'}},
-    async ({event}) =>{
-        const {id,first_name,last_name,email_addresses,image_url} = event.data
+    async ({event,step}) =>{
+        const {id,first_name,last_name,email_addresses,primary_email_address_id,image_url} = event.data
+        const primaryEmail = email_addresses?.find(({id:emailId})=>emailId === primary_email_address_id)
+            ?? email_addresses?.[0]
+
+        if(!id || !primaryEmail?.email_address || !image_url){
+            throw new Error('Clerk user.updated event is missing a user ID, email address, or image URL')
+        }
+
         const userData = {
-            _id: id,
-            email: email_addresses[0].email_address,
-            name: first_name+' '+last_name,
+            email: primaryEmail.email_address,
+            name: [first_name,last_name].filter(Boolean).join(' ') || primaryEmail.email_address,
             image: image_url
         }
-        await User.findByIdAndUpdate(id,userData)
-        }
+
+        await step.run('update-user-record', async () =>{
+            const result = await User.updateOne(
+                {_id:id},
+                {$set:userData},
+                {upsert:true,runValidators:true}
+            )
+            return {updated:result.modifiedCount > 0, created:result.upsertedCount > 0}
+        })
+    }
 )
 
 //Inngest Function to cancel booking and release seats of show
