@@ -4,23 +4,20 @@ import { useState } from "react"
 import toast from "react-hot-toast"
 import { useNavigate } from "react-router-dom"
 
-const DateSelect = ({id}) =>{
+const DateSelect = ({id, dateTime = {}}) =>{
 
     const navigate = useNavigate();
 
     const [selected, setSelected] = useState(null)
-    const today = new Date()
-    today.setHours(0, 0, 0, 0)
-    const dates = Array.from({length: 7}, (_, offset) => {
-        const date = new Date(today)
-        date.setDate(today.getDate() + offset)
-        const dateKey = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`
-
-        return {date, dateKey}
-    })
+    const dates = Object.keys(dateTime)
+        .sort()
+        .map((dateKey) => ({
+            dateKey,
+            date: new Date(`${dateKey}T00:00:00`)
+        }))
 
     const onBookHandler = () => {
-        if(!selected){
+        if(!selected || !dateTime[selected]?.length){
             return toast('Please select a date!')
         }
         navigate(`/movies/${id}/${selected}`)
@@ -52,9 +49,12 @@ const DateSelect = ({id}) =>{
                      <ChevronRightIcon width={28}/>
                     </div>
                 </div>
-                <button onClick={onBookHandler} className="bg-primary text-white px-8 py-2 mt-6
-                rounded hover:bg-primary/90 transition-all cursor-pointer">
-                   Book Now 
+                {dates.length === 0 && (
+                    <p className="mt-5 text-sm text-gray-400">No upcoming show dates are available.</p>
+                )}
+                <button onClick={onBookHandler} disabled={dates.length === 0} className="bg-primary text-white px-8 py-2 mt-6
+                rounded hover:bg-primary/90 transition-all cursor-pointer disabled:cursor-not-allowed disabled:opacity-50">
+                   Book Now
                 </button>
 
             </div>

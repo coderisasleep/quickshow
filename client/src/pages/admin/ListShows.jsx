@@ -1,22 +1,40 @@
-import { dummyShowsData } from "../../assets/assets";
+
 import Title from "./Title";
 import { dateFormat } from "../../lib/dateFormat";
+import { useEffect, useState} from 'react';
+import Loading from "../../components/Loading";
+import { useAppContext } from "../../context/AppContext";
 
 const ListShow = () =>{
 
     const currency = import.meta.env.VITE_CURRENCY
-    const shows = [{
-        movie: dummyShowsData[0],
-        showDateTime: "2026-10-30T02:30:00.000Z",
-        showPrice: 59,
-        occupiedSeats:{
-            A1: "user_1",
-            B1: "user_2",
-            C1: "user_3"
-        }
-    }];
 
-    return (
+    const { axios,getToken,user} = useAppContext()
+
+    const [shows,setShows] = useState([]);
+    const [loading,setLoading] = useState(true);
+
+    const getAllShows = async() =>{
+        
+        try{
+            const {data} = await axios.get('./api/admin/all-shows',{
+                headers:{Authorization: `Bearer ${await getToken()}`}
+            });
+           setShows(data.shows)
+
+            setLoading(false);
+        }catch(error){
+            console.error(error);
+        }
+    }
+
+    useEffect(()=>{
+        if(user){
+           getAllShows(); 
+        } 
+    },[user]);
+
+    return !loading ? (
         <>
         <Title text1="List" text2="Shows"/>
         <div className="max-w-4xl mt-6 overflow-x-auto">
@@ -43,7 +61,7 @@ const ListShow = () =>{
           </table>
         </div>
         </>
-    )
-}
+    ) : <Loading/>
+} 
 
 export default ListShow

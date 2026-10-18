@@ -3,13 +3,39 @@ import BlurCircle from '../components/BlurCircle'
 import { CalendarDays } from 'lucide-react'
 import timeFormat from '../lib/timeFormat'
 import { dateFormat } from '../lib/dateFormat'
-
-const currency = import.meta.env.VITE_CURRENCY
+import { useAppContext } from '../context/AppContext'
+import { useEffect, useState } from 'react'
+import Loading from '../components/Loading'
 
 const MyBookings = () => {
-    const bookings = dummyBookingData
 
-    return (
+    const currency = import.meta.env.VITE_CURRENCY
+    const { axios, getToken, user, image_base_url } = useAppContext()
+
+    const [bookings,setBookings] = useState([])
+    const[isLoading,setIsLoading] = useState(true)
+
+    const getMyBookings = async () =>{
+        try {
+            const {data} = await axios.get('/api/user/bookings',{headers: {Authorization: `Bearer ${await getToken()}`}})
+            if(data.success){
+                setBookings(data.bookings)
+            }
+        } catch (error) {
+            console.log(error)
+        }
+
+        setIsLoading(false)
+    }
+
+    useEffect(() =>{
+        if(user){
+          getMyBookings()
+        }
+        
+    },[user])
+
+    return !isLoading ? (
         <div className='relative px-6 md:px-16 lg:px-40 pt-30 md:pt-40 min-h-[80vh]'>
             <BlurCircle top="100px" left="100px"/>
             <div>
@@ -19,7 +45,7 @@ const MyBookings = () => {
             {bookings.map((item,index)=>(
                 <div key={index} className='flex flex-col sm:flex-row sm:items-stretch justify-between bg-primary/8 border border-primary/20 rounded-lg mt-4 p-2 max-w-3xl'>
                       <div className='flex min-w-0 flex-1 flex-col sm:flex-row'>
-                           <img src={item.show.movie.poster_path} alt="" className='w-full sm:w-44 sm:shrink-0 aspect-video h-auto object-cover object-bottom rounded'/>
+                           <img src={image_base_url + item.show.movie.poster_path} alt="" className='w-full sm:w-44 sm:shrink-0 aspect-video h-auto object-cover object-bottom rounded'/>
                            <div className='flex min-w-0 flex-1 flex-col p-4'>
                                <p className='text-lg font-semibold'>{item.show.movie.title}</p>
                                <p className='text-gray-400 text-sm'>{timeFormat(item.show.movie.runtime)}</p>
@@ -45,6 +71,8 @@ const MyBookings = () => {
                 </div>
             ))}
         </div>
+    ) : (
+        <Loading/>
     )
 }
 

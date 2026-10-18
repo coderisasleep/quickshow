@@ -15,6 +15,9 @@ import Dashboard from './pages/admin/Dashboard'
 import AddShow from './pages/admin/AddShow'
 import ListShow from './pages/admin/ListShows'
 import ListBookings from './pages/admin/ListBookings'
+import { useAppContext } from './context/AppContext'
+import { SignIn } from '@clerk/react'
+import Loading from './components/Loading'
 
 const App = () => {
 
@@ -23,6 +26,8 @@ const App = () => {
   const movieDetailsRoute = matchPath('/movies/:id', pathname)
   const isUnknownMovie = movieDetailsRoute
     && !dummyShowsData.some((movie) => movie._id === movieDetailsRoute.params.id)
+  
+  const { user, isClerkLoaded } = useAppContext()
 
   return(
     <>
@@ -33,9 +38,15 @@ const App = () => {
       <Route path='/movies' element={<Movies/>} />
       <Route path='/movies/:id' element={<MovieDetails/>} />
       <Route path='/movies/:id/:date' element={<SeatLayout/>} />
-      <Route path='/myBookings' element={<MyBookings/>} />
+      <Route path='/my-bookings' element={<MyBookings/>} />
+      <Route path='/loading/:nextUrl' element={<Loading/>} />
+
       <Route path='/favourite' element={<Favourite/>} />
-      <Route path='/admin/*' element={<Layout/>}>
+      <Route path='/admin/*' element={!isClerkLoaded ? <Loading/> : user ? <Layout/> : (
+        <div className='min-h-screen flex justify-center items-center'>
+          <SignIn fallbackRedirectUrl={'/admin'}/>
+        </div>
+      )}>
        <Route index element={<Dashboard/>}/>
        <Route path="add-show" element={<AddShow/>}></Route>
        <Route path="list-shows" element={<ListShow/>}></Route>
