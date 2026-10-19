@@ -80,14 +80,14 @@ const TrailersSection = () => {
 
     // Auto-advance rotating slide show from right to left every 3.5s
     useEffect(() => {
-        if (!isSlideshow || isPaused) return
+        if (!isSlideshow || isPaused || isPlaying) return
 
         const timer = setInterval(() => {
             nextSlide()
         }, 3500)
 
         return () => clearInterval(timer)
-    }, [isSlideshow, isPaused, trailers.length])
+    }, [isSlideshow, isPaused, isPlaying, trailers.length])
 
     const handleTrailerSelect = (trailer) => {
         setCurrentTrailer(trailer)
@@ -158,6 +158,9 @@ const TrailersSection = () => {
                     src={currentTrailer?.videoUrl}
                     controls
                     playing={isPlaying}
+                    onPlay={() => setIsPlaying(true)}
+                    onPause={() => setIsPlaying(false)}
+                    onEnded={() => setIsPlaying(false)}
                     width='100%'
                     height='100%'
                     className='relative z-10'
