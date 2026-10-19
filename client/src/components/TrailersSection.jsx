@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from 'react'
-import { useLocation, useNavigate } from 'react-router-dom'
+import { useLocation } from 'react-router-dom'
 import { dummyTrailers } from '../assets/assets'
 import ReactPlayer from 'react-player'
 import BlurCircle from './BlurCircle'
@@ -9,7 +9,6 @@ import { useAppContext } from '../context/AppContext'
 const TrailersSection = () => {
     const { axios } = useAppContext()
     const location = useLocation()
-    const navigate = useNavigate()
     const trailersSectionRef = useRef(null)
 
     const [trailers, setTrailers] = useState(dummyTrailers)
@@ -22,74 +21,69 @@ const TrailersSection = () => {
     const [isPaused, setIsPaused] = useState(false)
     const [itemsPerView, setItemsPerView] = useState(4)
 
+    // Unified trailer loading and selection
     useEffect(() => {
         let isMounted = true
-        const fetchTrailers = async () => {
+        const targetMovieId = location.state?.trailerMovieId
+
+        const loadTrailers = async () => {
             try {
                 const { data } = await axios.get('/api/show/trailers')
-                if (isMounted && data?.success && data.trailers?.length > 0) {
-                    setTrailers(data.trailers)
-                    if (!location.state?.trailerMovieId) {
-                        setCurrentTrailer(data.trailers[0])
+                if (!isMounted) return
+
+                let loadedTrailers = data?.success && data.trailers?.length > 0
+                    ? data.trailers
+                    : dummyTrailers
+
+                if (targetMovieId) {
+                    let targetTrailer = loadedTrailers.find(
+                        (t) => t.movieId?.toString() === targetMovieId.toString()
+                    )
+
+                    if (!targetTrailer) {
+                        try {
+                            const { data: singleData } = await axios.get(`/api/show/trailer/${targetMovieId}`)
+                            if (isMounted && singleData?.success && singleData.trailer) {
+                                targetTrailer = singleData.trailer
+                                loadedTrailers = [
+                                    targetTrailer,
+                                    ...loadedTrailers.filter((t) => t.movieId?.toString() !== targetMovieId.toString()),
+                                ]
+                            }
+                        } catch (singleErr) {
+                            console.error('Error fetching trailer for movie:', targetMovieId, singleErr)
+                        }
+                    }
+
+                    if (isMounted) {
+                        setTrailers(loadedTrailers)
+                        if (targetTrailer) {
+                            setCurrentTrailer(targetTrailer)
+                            setIsPlaying(true)
+                            setTimeout(() => {
+                                trailersSectionRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center' })
+                            }, 200)
+                        } else {
+                            setCurrentTrailer(loadedTrailers[0])
+                        }
+                    }
+                } else {
+                    if (isMounted) {
+                        setTrailers(loadedTrailers)
+                        setCurrentTrailer(loadedTrailers[0])
                     }
                 }
             } catch (error) {
-                console.error('Failed to load now showing trailers:', error)
+                console.error('Failed to load trailers:', error)
             }
         }
-        fetchTrailers()
+
+        loadTrailers()
+
         return () => {
             isMounted = false
         }
-    }, [axios, location.state?.trailerMovieId])
-
-    // Auto-select and play trailer when navigated from Movie Details page
-    useEffect(() => {
-        const targetMovieId = location.state?.trailerMovieId
-        if (!targetMovieId) return
-
-        let isCancelled = false
-
-        const selectAndPlayTargetTrailer = async () => {
-            let targetTrailer = trailers.find(
-                (t) => t.movieId?.toString() === targetMovieId.toString()
-            )
-
-            if (!targetTrailer) {
-                try {
-                    const { data } = await axios.get(`/api/show/trailer/${targetMovieId}`)
-                    if (data?.success && data.trailer) {
-                        targetTrailer = data.trailer
-                        if (!isCancelled) {
-                            setTrailers((prev) => [
-                                targetTrailer,
-                                ...prev.filter((t) => t.movieId?.toString() !== targetMovieId.toString()),
-                            ])
-                        }
-                    }
-                } catch (err) {
-                    console.error('Error fetching trailer for movie:', targetMovieId, err)
-                }
-            }
-
-            if (targetTrailer && !isCancelled) {
-                setCurrentTrailer(targetTrailer)
-                setIsPlaying(true)
-                setTimeout(() => {
-                    trailersSectionRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center' })
-                }, 200)
-            }
-
-            // Clear router state to avoid re-triggering on subsequent renders
-            navigate(location.pathname, { replace: true, state: {} })
-        }
-
-        selectAndPlayTargetTrailer()
-
-        return () => {
-            isCancelled = true
-        }
-    }, [location.state?.trailerMovieId, trailers, axios, navigate, location.pathname])
+    }, [axios, location.key])
 
     // Responsive items per view
     useEffect(() => {
