@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react'
 import { dummyTrailers } from '../assets/assets'
 import ReactPlayer from 'react-player'
 import BlurCircle from './BlurCircle'
-import { PlayCircleIcon, ChevronLeft, ChevronRight } from 'lucide-react'
+import { ChevronLeft, ChevronRight, Play } from 'lucide-react'
 import { useAppContext } from '../context/AppContext'
 
 const TrailersSection = () => {
@@ -102,34 +102,46 @@ const TrailersSection = () => {
                 type='button'
                 aria-label={`Play trailer for ${trailer.title || 'movie'}`}
                 aria-pressed={isSelected}
-                className={`relative group/card w-full h-44 sm:h-52 md:h-56 rounded-lg overflow-hidden cursor-pointer transition-all duration-300 hover:-translate-y-1 ${
+                className={`relative group/card w-full aspect-video rounded-xl overflow-hidden cursor-pointer transition-all duration-300 hover:-translate-y-1 ${
                     isSelected
-                        ? 'ring-2 ring-primary ring-offset-2 ring-offset-gray-900 brightness-105'
-                        : 'opacity-75 hover:opacity-100'
+                        ? 'border-2 border-primary ring-2 ring-primary/40 shadow-lg shadow-primary/20 brightness-105'
+                        : 'border border-white/10 opacity-75 hover:opacity-100 hover:border-white/30'
                 }`}
                 onClick={() => handleTrailerSelect(trailer)}
             >
                 <img
                     src={trailer.image}
                     alt={trailer.title || 'trailer'}
-                    className='rounded-lg w-full h-full object-cover brightness-90 group-hover/card:brightness-100 transition duration-300'
+                    className='w-full h-full object-cover brightness-85 group-hover/card:brightness-100 transition duration-300'
                     onError={(e) => {
                         if (trailer.fallbackImage && e.currentTarget.src !== trailer.fallbackImage) {
                             e.currentTarget.src = trailer.fallbackImage
                         }
                     }}
                 />
-                <PlayCircleIcon
-                    strokeWidth={1.6}
-                    className='absolute top-1/2 left-1/2 w-6 md:w-10 h-6 md:h-10 transform -translate-x-1/2 -translate-y-1/2 text-white drop-shadow-md group-hover/card:scale-110 transition duration-300'
-                />
-                {trailer.title && (
-                    <div className='absolute bottom-0 left-0 right-0 p-2 bg-gradient-to-t from-black/90 via-black/50 to-transparent'>
-                        <p className='text-xs md:text-sm font-medium text-white truncate text-center'>
-                            {trailer.title}
-                        </p>
+                <div className='absolute inset-0 bg-gradient-to-t from-black/85 via-black/25 to-transparent flex flex-col justify-between p-2.5'>
+                    <div className='flex justify-end'>
+                        {isSelected && (
+                            <span className='bg-primary/95 text-[10px] font-semibold text-white px-2 py-0.5 rounded shadow-sm'>
+                                ACTIVE
+                            </span>
+                        )}
                     </div>
-                )}
+                    <div className='flex items-center gap-2'>
+                        <div
+                            className={`w-5 h-5 rounded-full flex items-center justify-center text-white shrink-0 shadow-sm transition-transform duration-300 group-hover/card:scale-110 ${
+                                isSelected ? 'bg-primary' : 'bg-white/20 backdrop-blur-sm'
+                            }`}
+                        >
+                            <Play className='w-2.5 h-2.5 fill-white ml-0.5' />
+                        </div>
+                        {trailer.title && (
+                            <p className='text-xs font-medium text-white truncate text-left'>
+                                {trailer.title}
+                            </p>
+                        )}
+                    </div>
+                </div>
             </button>
         )
     }
@@ -137,7 +149,9 @@ const TrailersSection = () => {
     return (
         <div className='px-6 md:px-16 lg:px-24 xl:px-44 py-20 overflow-hidden'>
             <p className='text-gray-300 font-medium text-lg max-w-[960px] mx-auto'>Trailers</p>
-            <div className='relative mt-6 aspect-video max-w-[960px] mx-auto'>
+
+            {/* Main Video Player with Rounded Corners */}
+            <div className='relative mt-6 aspect-video max-w-[960px] mx-auto rounded-xl sm:rounded-2xl overflow-hidden shadow-2xl bg-black border border-gray-800/60'>
                 <BlurCircle top='-100px' right='-100px' />
                 <ReactPlayer
                     key={currentTrailer?.videoUrl}
@@ -152,7 +166,7 @@ const TrailersSection = () => {
 
             {/* Static Grid when 4 or fewer trailers */}
             {!isSlideshow ? (
-                <div className='grid grid-cols-2 sm:grid-cols-4 gap-4 md:gap-8 mt-8 max-w-3xl mx-auto'>
+                <div className='grid grid-cols-2 sm:grid-cols-4 gap-4 md:gap-6 mt-8 max-w-3xl mx-auto'>
                     {trailers.map((trailer, idx) =>
                         renderTrailerCard(trailer, `${trailer.videoUrl || trailer.image}-${idx}`)
                     )}
@@ -169,7 +183,7 @@ const TrailersSection = () => {
                         type='button'
                         onClick={prevSlide}
                         aria-label='Previous trailers'
-                        className='absolute -left-3 md:-left-5 top-1/2 -translate-y-1/2 z-20 bg-gray-900/80 hover:bg-gray-800 p-2 rounded-full text-white/90 hover:text-white transition shadow-lg cursor-pointer border border-gray-700'
+                        className='absolute -left-3 md:-left-5 top-1/2 -translate-y-1/2 z-20 bg-gray-900/90 hover:bg-black p-2 rounded-full text-white/90 hover:text-white transition shadow-lg cursor-pointer border border-gray-700/80'
                     >
                         <ChevronLeft className='w-5 h-5 md:w-6 md:h-6' />
                     </button>
@@ -177,13 +191,13 @@ const TrailersSection = () => {
                         type='button'
                         onClick={nextSlide}
                         aria-label='Next trailers'
-                        className='absolute -right-3 md:-right-5 top-1/2 -translate-y-1/2 z-20 bg-gray-900/80 hover:bg-gray-800 p-2 rounded-full text-white/90 hover:text-white transition shadow-lg cursor-pointer border border-gray-700'
+                        className='absolute -right-3 md:-right-5 top-1/2 -translate-y-1/2 z-20 bg-gray-900/90 hover:bg-black p-2 rounded-full text-white/90 hover:text-white transition shadow-lg cursor-pointer border border-gray-700/80'
                     >
                         <ChevronRight className='w-5 h-5 md:w-6 md:h-6' />
                     </button>
 
                     {/* Slideshow viewport & track */}
-                    <div className='overflow-hidden rounded-xl py-2'>
+                    <div className='overflow-hidden rounded-xl py-2 px-1'>
                         <div
                             className='flex'
                             style={{
