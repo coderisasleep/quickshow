@@ -118,3 +118,54 @@ export const getShow = async(req,res) =>{
      res.json({success:false, message:error.message});
   }
 }
+
+// API to get trailers for now showing movies
+export const getNowShowingTrailers = async (req, res) => {
+  try {
+    const shows = await Show.find({ showDateTime: { $gte: new Date() } })
+      .populate('movie')
+      .sort({ showDateTime: 1 });
+
+    const movieMap = new Map();
+    shows.forEach((s) => {
+      if (s.movie?._id && !movieMap.has(s.movie._id.toString())) {
+        movieMap.set(s.movie._id.toString(), s.movie);
+      }
+    });
+
+    const movies = Array.from(movieMap.values()).slice(0, 20);
+
+    const trailerResults = await Promise.allSettled(
+      movies.map(async (movie) => {
+        try {
+          const { data } = await tmdbClient.get(`/movie/${movie._id}/videos`);
+          const trailer =
+            data.results?.find((v) => v.site === 'YouTube' && v.type === 'Trailer') ||
+            data.results?.find((v) => v.site === 'YouTube');
+
+          if (trailer?.key) {
+            return {
+              movieId: movie._id,
+              title: movie.title,
+              videoUrl: `https://www.youtube.com/watch?v=${trailer.key}`,
+              image: `https://img.youtube.com/vi/${trailer.key}/maxresdefault.jpg`,
+              fallbackImage: `https://img.youtube.com/vi/${trailer.key}/hqdefault.jpg`,
+            };
+          }
+        } catch (tmdbErr) {
+          console.error(`TMDB error fetching videos for movie ${movie._id}:`, tmdbErr.message);
+        }
+        return null;
+      })
+    );
+
+    const trailers = trailerResults
+      .filter((r) => r.status === 'fulfilled' && r.value !== null)
+      .map((r) => r.value);
+
+    res.json({ success: true, trailers });
+  } catch (error) {
+    console.error('Error in getNowShowingTrailers:', error);
+    res.status(500).json({ success: false, message: error.message });
+  }
+};
