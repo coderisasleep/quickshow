@@ -138,6 +138,17 @@ export const confirmBookingPayment = async(req,res) =>{
        booking.paymentLink = ""
        await booking.save()
 
+       // Auto-delete show from website if all tickets (90 seats) are sold
+       try {
+         const showData = await Show.findById(booking.show);
+         if (showData && Object.keys(showData.occupiedSeats || {}).length >= 90) {
+           showData.isDeleted = true;
+           await showData.save();
+         }
+       } catch (showCheckErr) {
+         console.error('Error checking show sold-out status:', showCheckErr.message);
+       }
+
        await inngest.send({
          id: `booking-confirmation-${bookingId}`,
          name: "app/show.booked",

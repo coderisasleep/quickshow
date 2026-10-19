@@ -12,7 +12,7 @@ export const isAdmin = async(req,res)=>{
 export const getDashboardData = async(req,res)=>{
     try{
        const bookings = await Booking.find({isPaid:true});
-       const activeShows = await Show.find({showDateTime:{$gte: new Date()}}).populate('movie');
+       const activeShows = await Show.find({showDateTime:{$gte: new Date()}, isDeleted: {$ne: true}}).populate('movie');
 
        const totalUser = await User.countDocuments();
 
@@ -34,13 +34,35 @@ export const getDashboardData = async(req,res)=>{
 //API to get all shows
 export const getAllShows = async(req,res)=>{
     try{
-        const shows = await Show.find({showDateTime:{$gte: new Date()}}).populate('movie').sort({showDateTime: 1});
+        const shows = await Show.find({showDateTime:{$gte: new Date()}, isDeleted: {$ne: true}}).populate('movie').sort({showDateTime: 1});
         res.json({success:true, shows})
     }catch(error){
 
         console.error(error);
         res.json({success:false, message:error.message})
 
+    }
+}
+
+//API to delete show(s)
+export const deleteShow = async(req,res)=>{
+    try{
+        const { showId, showIds } = req.body;
+        const targetIds = Array.isArray(showIds) ? showIds : (showId ? [showId] : []);
+
+        if(targetIds.length === 0){
+            return res.status(400).json({success:false, message: "Please specify showId or showIds to delete"});
+        }
+
+        await Show.updateMany(
+            { _id: { $in: targetIds } },
+            { $set: { isDeleted: true } }
+        );
+
+        res.json({success:true, message: "Show(s) deleted successfully"});
+    }catch(error){
+        console.error(error);
+        res.status(500).json({success:false, message:error.message});
     }
 }
 
