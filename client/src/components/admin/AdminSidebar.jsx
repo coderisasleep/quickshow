@@ -4,14 +4,12 @@ import { ListIcon } from 'lucide-react'
 import { ListCollapseIcon } from 'lucide-react'
 import { NavLink } from 'react-router-dom'
 import { assets } from '../../assets/assets'
+import { useAppContext } from '../../context/AppContext'
 
 const AdminSidebar = () =>{
 
-    const user ={
-        firstName: 'Admin',
-        LastName: 'User',
-        imageUrl: assets.profile,
-    }
+    const { user } = useAppContext()
+    const pfp = user?.imageUrl || assets.profile
 
     const adminNavlinks = [
         {name:'Dashboard',path:'/admin', icon: LayoutDashboardIcon},
@@ -22,8 +20,8 @@ const AdminSidebar = () =>{
 
     return (
         <aside className='flex h-[calc(100vh-64px)] w-20 flex-col items-center border-r border-gray-300/20 bg-slate-950/40 pt-8 text-sm text-gray-300 shadow-[inset_-1px_0_0_rgba(255,255,255,0.04)] transition-all duration-200 md:w-60'>
-          <img className='h-10 w-10 rounded-full object-cover md:h-14 md:w-14' src={user.imageUrl} alt="sidebar"/>
-          <p className='mt-2 hidden text-base font-medium text-white md:block'>{user.firstName} {user.LastName}</p>
+          <img className='h-10 w-10 rounded-full object-cover md:h-14 md:w-14' src={pfp} alt="sidebar"/>
+          <p className='mt-2 hidden text-base font-medium text-white md:block'>Admin User</p>
 
           <nav className='mt-6 w-full space-y-1'>
             {adminNavlinks.map((link,index)=>(
