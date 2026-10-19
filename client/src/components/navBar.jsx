@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import  { LayoutDashboard, MenuIcon , SearchIcon, Ticket, TicketPlus, XIcon } from 'lucide-react'
 import { Link, useNavigate } from 'react-router-dom'
 import { assets } from '../assets/assets'
@@ -9,6 +9,7 @@ import { useAppContext } from '../context/AppContext'
 const navBar = () => {
 
   const [isOpen, setIsOpen] = useState(false)
+  const [isVisible, setIsVisible] = useState(true)
   const {user} = useUser()
   const { openSignIn } = useClerk()
 
@@ -16,8 +17,40 @@ const navBar = () => {
 
   const { favouriteMovies, isAdmin } = useAppContext()
 
+  useEffect(() => {
+    let lastY = window.scrollY
+
+    const handleScroll = () => {
+      const currentY = window.scrollY
+
+      if (isOpen) {
+        setIsVisible(true)
+        lastY = currentY
+        return
+      }
+
+      if (currentY <= 30) {
+        setIsVisible(true)
+        lastY = currentY
+        return
+      }
+
+      const diff = currentY - lastY
+      if (diff > 5) {
+        setIsVisible(false)
+      } else if (diff < -5) {
+        setIsVisible(true)
+      }
+
+      lastY = currentY
+    }
+
+    window.addEventListener('scroll', handleScroll, { passive: true })
+    return () => window.removeEventListener('scroll', handleScroll)
+  }, [isOpen])
+
   return(
-    <div className='fixed top-0 left-0 z-50 w-full flex items-center justify-between px-6 md:px-16 lg:px-36 py-5'>
+    <div className={`fixed top-0 left-0 z-50 w-full flex items-center justify-between px-6 md:px-16 lg:px-36 py-5 transition-transform duration-300 ease-in-out ${isVisible ? 'translate-y-0' : '-translate-y-full'}`}>
       <Link to="/" className='max-md:flex-1'>
       <img src={assets.logo} alt="" className='w-36 h-auto'/>
       </Link>
