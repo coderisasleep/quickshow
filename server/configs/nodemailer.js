@@ -4,9 +4,14 @@ let cachedTransporter = null;
 
 function getTransporter() {
     if (!cachedTransporter) {
+        const host = process.env.SMTP_HOST || "smtp-relay.brevo.com";
+        const port = Number(process.env.SMTP_PORT) || 587;
+        const secure = process.env.SMTP_SECURE === "true" || port === 465;
+
         cachedTransporter = nodemailer.createTransport({
-            host: "smtp-relay.brevo.com",
-            port: 587,
+            host,
+            port,
+            secure,
             auth: {
                 user: process.env.SMTP_USER,
                 pass: process.env.SMTP_PASS,
