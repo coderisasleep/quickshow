@@ -202,4 +202,45 @@ export const getNowShowingTrailers = async (req, res) => {
     console.error('Error in getNowShowingTrailers:', error);
     res.status(500).json({ success: false, message: error.message });
   }
+};
+
+// API to get a single movie's trailer
+export const getMovieTrailer = async (req, res) => {
+  try {
+    const { movieId } = req.params;
+    let movie = await Movie.findById(movieId);
+
+    let title = movie?.title;
+    if (!title) {
+      try {
+        const { data } = await tmdbClient.get(`/movie/${movieId}`);
+        title = data.title;
+      } catch (err) {
+        title = "Trailer";
+      }
+    }
+
+    const { data } = await tmdbClient.get(`/movie/${movieId}/videos`);
+    const trailer =
+      data.results?.find((v) => v.site === 'YouTube' && v.type === 'Trailer') ||
+      data.results?.find((v) => v.site === 'YouTube');
+
+    if (trailer?.key) {
+      return res.json({
+        success: true,
+        trailer: {
+          movieId,
+          title,
+          videoUrl: `https://www.youtube.com/watch?v=${trailer.key}`,
+          image: `https://img.youtube.com/vi/${trailer.key}/maxresdefault.jpg`,
+          fallbackImage: `https://img.youtube.com/vi/${trailer.key}/hqdefault.jpg`,
+        }
+      });
+    }
+
+    return res.json({ success: false, message: "Trailer not available for this movie" });
+  } catch (error) {
+    console.error(`Error in getMovieTrailer for ${req.params.movieId}:`, error.message);
+    res.status(500).json({ success: false, message: error.message });
+  }
 };

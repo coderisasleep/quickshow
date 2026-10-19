@@ -1,4 +1,5 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
+import { useLocation, useNavigate } from 'react-router-dom'
 import { dummyTrailers } from '../assets/assets'
 import ReactPlayer from 'react-player'
 import BlurCircle from './BlurCircle'
@@ -7,6 +8,10 @@ import { useAppContext } from '../context/AppContext'
 
 const TrailersSection = () => {
     const { axios } = useAppContext()
+    const location = useLocation()
+    const navigate = useNavigate()
+    const trailersSectionRef = useRef(null)
+
     const [trailers, setTrailers] = useState(dummyTrailers)
     const [currentTrailer, setCurrentTrailer] = useState(dummyTrailers[0])
     const [isPlaying, setIsPlaying] = useState(false)
@@ -24,7 +29,9 @@ const TrailersSection = () => {
                 const { data } = await axios.get('/api/show/trailers')
                 if (isMounted && data?.success && data.trailers?.length > 0) {
                     setTrailers(data.trailers)
-                    setCurrentTrailer(data.trailers[0])
+                    if (!location.state?.trailerMovieId) {
+                        setCurrentTrailer(data.trailers[0])
+                    }
                 }
             } catch (error) {
                 console.error('Failed to load now showing trailers:', error)
@@ -34,7 +41,55 @@ const TrailersSection = () => {
         return () => {
             isMounted = false
         }
-    }, [axios])
+    }, [axios, location.state?.trailerMovieId])
+
+    // Auto-select and play trailer when navigated from Movie Details page
+    useEffect(() => {
+        const targetMovieId = location.state?.trailerMovieId
+        if (!targetMovieId) return
+
+        let isCancelled = false
+
+        const selectAndPlayTargetTrailer = async () => {
+            let targetTrailer = trailers.find(
+                (t) => t.movieId?.toString() === targetMovieId.toString()
+            )
+
+            if (!targetTrailer) {
+                try {
+                    const { data } = await axios.get(`/api/show/trailer/${targetMovieId}`)
+                    if (data?.success && data.trailer) {
+                        targetTrailer = data.trailer
+                        if (!isCancelled) {
+                            setTrailers((prev) => [
+                                targetTrailer,
+                                ...prev.filter((t) => t.movieId?.toString() !== targetMovieId.toString()),
+                            ])
+                        }
+                    }
+                } catch (err) {
+                    console.error('Error fetching trailer for movie:', targetMovieId, err)
+                }
+            }
+
+            if (targetTrailer && !isCancelled) {
+                setCurrentTrailer(targetTrailer)
+                setIsPlaying(true)
+                setTimeout(() => {
+                    trailersSectionRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center' })
+                }, 200)
+            }
+
+            // Clear router state to avoid re-triggering on subsequent renders
+            navigate(location.pathname, { replace: true, state: {} })
+        }
+
+        selectAndPlayTargetTrailer()
+
+        return () => {
+            isCancelled = true
+        }
+    }, [location.state?.trailerMovieId, trailers, axios, navigate, location.pathname])
 
     // Responsive items per view
     useEffect(() => {
@@ -147,7 +202,7 @@ const TrailersSection = () => {
     }
 
     return (
-        <div className='px-6 md:px-16 lg:px-24 xl:px-44 py-20 overflow-hidden'>
+        <div id='trailers-section' ref={trailersSectionRef} className='px-6 md:px-16 lg:px-24 xl:px-44 py-20 overflow-hidden'>
             <p className='text-gray-300 font-medium text-lg max-w-[960px] mx-auto'>Trailers</p>
 
             {/* Main Video Player with Rounded Corners */}
