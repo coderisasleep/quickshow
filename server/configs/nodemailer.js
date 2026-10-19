@@ -1,25 +1,46 @@
 import nodemailer from 'nodemailer'
 
-const transporter = nodemailer.createTransport({
-    host: "smtp-relay.brevo.com",
-    port: 587,
-    auth:{
-        user: process.env.SMTP_USER,
-        pass: process.env.SMTP_PASS,
-    },
-})
+let cachedTransporter = null;
 
-const sendEmail = async({to,subject,body})=>{
-    const missingConfig = ["SMTP_USER","SMTP_PASS","SENDER_EMAIL"].filter((key)=>!process.env[key])
-    if(missingConfig.length){
-        throw new Error(`Missing SMTP configuration: ${missingConfig.join(", ")}`)
+function getTransporter() {
+    if (!cachedTransporter) {
+        cachedTransporter = nodemailer.createTransport({
+            host: "smtp-relay.brevo.com",
+            port: 587,
+            auth: {
+                user: process.env.SMTP_USER,
+                pass: process.env.SMTP_PASS,
+            },
+        });
     }
-
-    const response = await transporter.sendMail({
-        from: process.env.SENDER_EMAIL,
-        to,subject,html:body,
-    })
-    return response
+    return cachedTransporter;
 }
 
-export default sendEmail
+const sendEmail = async ({ to, subject, body, html, text }) => {
+    const missingConfig = ["SMTP_USER", "SMTP_PASS", "SENDER_EMAIL"].filter((key) => !process.env[key]);
+    if (missingConfig.length) {
+        const errorMsg = `Missing Brevo SMTP configuration: ${missingConfig.join(", ")}. Please configure them in your environment variables.`;
+        console.error(`[Nodemailer] ${errorMsg}`);
+        throw new Error(errorMsg);
+    }
+
+    const htmlContent = html || body;
+    const fromAddress = process.env.SENDER_NAME 
+        ? `"${process.env.SENDER_NAME}" <${process.env.SENDER_EMAIL}>`
+        : `"QuickShow" <${process.env.SENDER_EMAIL}>`;
+
+    const transporter = getTransporter();
+    const mailOptions = {
+        from: fromAddress,
+        to,
+        subject,
+        html: htmlContent,
+        text: text,
+    };
+
+    const response = await transporter.sendMail(mailOptions);
+    console.log(`[Nodemailer] Email sent successfully to ${to} (MessageId: ${response.messageId})`);
+    return response;
+};
+
+export default sendEmail;

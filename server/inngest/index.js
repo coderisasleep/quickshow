@@ -1,8 +1,12 @@
 import { Inngest } from "inngest";
+import { clerkClient } from "@clerk/express";
 import User from "../model/User.js";
 import Booking from "../model/Booking.js";
 import Show from "../model/Show.js";
+import Movie from "../model/Movie.js";
 import sendEmail from "../configs/nodemailer.js";
+import { generateBookingTicketEmail } from "../utils/emailTemplates.js";
+
 
 //create client to send and receive events
 export const inngest = new Inngest({id:"movie-ticket-booking"});
@@ -91,7 +95,11 @@ const releaseSeatsAndDeleteBooking = inngest.createFunction(
 
 
 const sendBookingConfirmationEmail = inngest.createFunction(
-    {id:"send-booking-confirmation-email", triggers:{event:"app/show.booked"}},
+    {
+        id: "send-booking-confirmation-email",
+        name: "Send Booking Confirmation Email",
+        triggers: [{ event: "app/show.booked" }]
+    },
     async ({event,step}) =>{
         const {bookingId} = event.data;
         const booking = await Booking.findById(bookingId).populate({
@@ -99,24 +107,66 @@ const sendBookingConfirmationEmail = inngest.createFunction(
             populate:{path:"movie",model:"Movie"}
         }).populate("user");
 
-        if(!booking?.user?.email || !booking.show?.movie?.title){
-            throw new Error(`Cannot send confirmation email for incomplete booking ${bookingId}`);
+        if(!booking){
+            console.error(`[Inngest] Booking ${bookingId} not found`);
+            return;
         }
 
-        const showDateTime = new Date(booking.show.showDateTime);
-        await step.run("send-booking-confirmation-email", () => sendEmail({
-            to: booking.user.email,
-            subject: `Payment Confirmation: "${booking.show.movie.title}" booked!`,
-            body: `<div style="font-family:Arial,sans-serif;line-height:1.5">
-                <h2>Hi ${booking.user.name},</h2>
-                <p>Your booking for <strong>${booking.show.movie.title}</strong> is confirmed.</p>
-                <p><strong>Date:</strong> ${showDateTime.toLocaleDateString("en-US",{timeZone:"Asia/Kolkata"})}<br/>
-                <strong>Time:</strong> ${showDateTime.toLocaleTimeString("en-US",{timeZone:"Asia/Kolkata"})}</p>
-                <p>Enjoy the show!<br/>Thanks for booking with us!<br/>-Quickshow Team</p>
-            </div>`
-        }));
+        // 1. Resolve recipient user details with fallback to Clerk API
+        let userEmail = booking.user?.email;
+        let userName = booking.user?.name;
+
+        if(!userEmail){
+            const clerkUserId = typeof booking.user === 'string'
+                ? booking.user
+                : (booking.user?._id || booking.user);
+
+            if(clerkUserId){
+                try{
+                    const clerkUser = await clerkClient.users.getUser(clerkUserId);
+                    const primaryEmail = clerkUser?.emailAddresses?.find(
+                        (e) => e.id === clerkUser.primaryEmailAddressId
+                    ) || clerkUser?.emailAddresses?.[0];
+
+                    userEmail = primaryEmail?.emailAddress;
+                    userName = [clerkUser?.firstName, clerkUser?.lastName].filter(Boolean).join(' ') || clerkUser?.username || 'Movie Lover';
+                }catch(clerkErr){
+                    console.error(`[Inngest] Failed to fetch Clerk user ${clerkUserId}:`, clerkErr.message);
+                }
+            }
+        }
+
+        if(!userEmail){
+            throw new Error(`Cannot send confirmation email: no recipient email found for booking ${bookingId}`);
+        }
+
+        // 2. Resolve movie details
+        const show = booking.show;
+        let movie = show?.movie;
+        if(show && typeof show.movie === 'string'){
+            movie = await Movie.findById(show.movie);
+        }
+
+        // 3. Generate rich HTML cinema ticket and plain text
+        const emailContent = generateBookingTicketEmail({
+            booking,
+            user: { name: userName, email: userEmail },
+            movie: movie || { title: "Movie Show" },
+            show: show || {},
+        });
+
+        // 4. Send email inside tracked Inngest step
+        await step.run("send-booking-confirmation-email", async () => {
+            return await sendEmail({
+                to: userEmail,
+                subject: emailContent.subject,
+                html: emailContent.html,
+                text: emailContent.text,
+            });
+        });
     }
 );
+
 
 //create an empty array where we will export Inngest functions
 export const functions = [syncUserCreation,
