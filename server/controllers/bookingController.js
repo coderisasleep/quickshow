@@ -138,6 +138,12 @@ export const confirmBookingPayment = async(req,res) =>{
        booking.paymentLink = ""
        await booking.save()
 
+       await inngest.send({
+         id: `booking-confirmation-${bookingId}`,
+         name: "app/show.booked",
+         data: {bookingId}
+       })
+
        res.json({success:true,isPaid:true})
     }catch(error){
         console.error(error)

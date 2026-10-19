@@ -32,7 +32,11 @@ const MyBookings = () => {
             setIsLoading(true)
             setError('')
             try {
-                const {data} = await axios.get('/api/user/bookings',{headers: {Authorization: `Bearer ${await getToken()}`}})
+                const token = await getToken()
+                if(!token){
+                    throw new Error('Unable to retrieve authentication token')
+                }
+                const {data} = await axios.get('/api/user/bookings',{headers: {Authorization: `Bearer ${token}`}})
                 if(!data.success){
                     throw new Error(data.message || 'Unable to load your bookings.')
                 }
@@ -67,22 +71,24 @@ const MyBookings = () => {
         const confirmPayment = async () =>{
             try{
                 const token = await getToken()
+                if(!token){
+                    throw new Error('Unable to retrieve authentication token')
+                }
                 const {data} = await axios.post('/api/booking/confirm-payment',{sessionId:paymentSessionId},{
                     headers:{Authorization:`Bearer ${token}`}
                 })
                 if(!data.success || !data.isPaid){
                     throw new Error(data.message || 'Unable to confirm payment.')
                 }
-                setPaymentError('')
+                if(isActive){
+                    setPaymentError('')
+                    setRefreshKey(key => key + 1)
+                    navigate('/my-bookings',{replace:true})
+                }
             }catch(error){
                 console.error(error)
                 if(isActive){
                     setPaymentError(error.response?.data?.message || error.message || 'Unable to confirm payment.')
-                }
-            }finally{
-                if(isActive){
-                    setRefreshKey(key => key + 1)
-                    navigate('/my-bookings',{replace:true})
                 }
             }
         }

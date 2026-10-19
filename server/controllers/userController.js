@@ -6,6 +6,9 @@ import Movie from "../model/Movie.js";
 export const getUserBookings = async(req,res) =>{
     try{
       const user = req.auth().userId;
+      if(!user){
+        return res.status(401).json({success:false,message:"Authentication required"})
+      }
       
       const bookings = await Booking.find({user}).populate({
         path:"show",
@@ -14,7 +17,7 @@ export const getUserBookings = async(req,res) =>{
       res.json({success:true, bookings})
     }catch(error){
       console.error(error.message);
-      res.json({success:false,message:error.message});
+      res.status(500).json({success:false,message:error.message});
     }
 }
 

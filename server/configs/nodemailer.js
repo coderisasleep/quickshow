@@ -10,6 +10,11 @@ const transporter = nodemailer.createTransport({
 })
 
 const sendEmail = async({to,subject,body})=>{
+    const missingConfig = ["SMTP_USER","SMTP_PASS","SENDER_EMAIL"].filter((key)=>!process.env[key])
+    if(missingConfig.length){
+        throw new Error(`Missing SMTP configuration: ${missingConfig.join(", ")}`)
+    }
+
     const response = await transporter.sendMail({
         from: process.env.SENDER_EMAIL,
         to,subject,html:body,

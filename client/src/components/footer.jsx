@@ -1,4 +1,3 @@
-import React from 'react'
 import { assets } from '../assets/assets'
 
 const footer = () => {
@@ -6,7 +5,7 @@ const footer = () => {
     <footer className="px-6 md:px-16 lg:px-36 mt-40 w-full text-gray-300">
             <div className="flex flex-col md:flex-row justify-between w-full gap-10 border-b border-gray-500 pb-14">
                 <div className="md:max-w-96">
-                    <img alt="" class="h-11" src={assets.logo} />
+                    <img alt="" className="h-11" src={assets.logo} />
                     <p className="mt-6 text-sm">
                         Quickshow is a movie discovery and booking website for browsing films currently showing in theaters.
                         Explore movie details, watch trailers, and choose seats for upcoming showtimes.

@@ -1,5 +1,6 @@
 import stripe from "stripe"
 import Booking from '../model/Booking.js'
+import { inngest } from '../inngest/index.js'
 
 const markBookingPaid = async(session) =>{
     if(session.payment_status !== 'paid'){
@@ -18,6 +19,12 @@ const markBookingPaid = async(session) =>{
     if(!booking){
         throw new Error(`Booking ${bookingId} not found for Stripe checkout session ${session.id}`)
     }
+
+    await inngest.send({
+        id: `booking-confirmation-${bookingId}`,
+        name: "app/show.booked",
+        data: {bookingId}
+    })
 }
 
 export const stripeWebhooks = async (request, response) =>{
