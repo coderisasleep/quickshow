@@ -15,6 +15,9 @@ const app = express();
 const port = 3000;
 const clerkPublishableKey = process.env.CLERK_PUBLISHABLE_KEY;
 const clerkSecretKey = process.env.CLERK_SECRET_KEY;
+const clockSkewInMs = process.env.CLERK_CLOCK_SKEW_IN_MS
+    ? parseInt(process.env.CLERK_CLOCK_SKEW_IN_MS, 10)
+    : 60000;
 
 if (!clerkPublishableKey || !clerkSecretKey) {
     throw new Error("CLERK_PUBLISHABLE_KEY and CLERK_SECRET_KEY must be configured");
@@ -27,10 +30,13 @@ app.use('/api/stripe', express.raw({type:'application/json'}),stripeWebhooks)
 
 //Middleware
 app.use(express.json())
-app.use(cors())
+app.use(cors({
+    exposedHeaders: ['x-clerk-auth-status', 'x-clerk-auth-reason', 'x-clerk-auth-message']
+}))
 app.use(clerkMiddleware({
     publishableKey: clerkPublishableKey,
-    secretKey: clerkSecretKey
+    secretKey: clerkSecretKey,
+    clockSkewInMs
 }))
 
 //API Routes

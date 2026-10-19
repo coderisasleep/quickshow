@@ -18,20 +18,26 @@ const AddShow = () =>{
     const [dateTimeInput,setDateTimeInput] = useState("");
     const [showPrice,setShowPrice] = useState("");
     const [addingShow, setAddingShow] = useState(false);
-
-
+    const [isLoading, setIsLoading] = useState(true);
+    const [error, setError] = useState(null);
 
     const fetchNowPlayingMovies = async () =>{
+       setIsLoading(true);
+       setError(null);
        try{
           const {data} = await axios.get('/api/show/now-playing',{
             headers: {Authorization: `Bearer ${await getToken()}`}})
-            if(data.success){
-                setNowPlayingMovies(data.movies)
-            }
+          if(data.success && Array.isArray(data.movies)){
+              setNowPlayingMovies(data.movies)
+          }else{
+              setError(data.message || 'Unable to load now playing movies')
+          }
        }catch(error){
-        console.error('Error fetching movies:',error)
-
-       }  
+          console.error('Error fetching movies:',error)
+          setError(error.response?.data?.message || error.message || 'Error fetching movies')
+       }finally{
+          setIsLoading(false);
+       }
     };
 
     const handleDateTimeAdd = () => {
@@ -106,7 +112,22 @@ const AddShow = () =>{
         
     },[user]);
 
-    return nowPlayingMovies.length>0 ?(
+    if (isLoading) {
+        return <Loading/>;
+    }
+
+    if (error && nowPlayingMovies.length === 0) {
+        return (
+            <div className="flex min-h-[60vh] flex-col items-center justify-center gap-4 text-center">
+                <p className="text-red-400">{error}</p>
+                <button onClick={fetchNowPlayingMovies} className="bg-primary px-6 py-2 rounded text-white cursor-pointer hover:bg-primary/90">
+                    Retry
+                </button>
+            </div>
+        );
+    }
+
+    return (
         <>
         <Title text1="Add" text2="Shows"/>
         <p className="mt-10 text-lg font-medium">Now Playing Movies</p>
@@ -181,7 +202,7 @@ const AddShow = () =>{
         </button>
 
         </>
-    ):<Loading/>
+    );
 }
 
 export default AddShow

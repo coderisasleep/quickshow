@@ -1,5 +1,5 @@
 import NavBar from './components/navBar'
-import { matchPath, Route, Routes } from 'react-router-dom'
+import { matchPath, Navigate, Route, Routes } from 'react-router-dom'
 import Movies from './pages/movies'
 import Home from './pages/home'
 import MovieDetails from './pages/movieDetails'
@@ -52,6 +52,8 @@ const App = () => {
        <Route path="list-shows" element={<ListShow/>}></Route>
        <Route path='list-bookings' element={<ListBookings/>}></Route>
       </Route>
+      <Route path='/my-bookings/admin' element={<Navigate to='/admin' replace />} />
+      <Route path='*' element={<Navigate to='/' replace />} />
     </Routes>
     {!isAdminRoute && !isUnknownMovie && <Footer/>}
     </>
