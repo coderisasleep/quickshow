@@ -47,6 +47,7 @@ export function generateBookingTicketEmail({ booking, user, movie, show }) {
 
   const unitPrice = show?.showPrice != null ? Number(show.showPrice) : (seats.length ? Math.round(booking.amount / seats.length) : booking.amount);
   const totalAmount = Number(booking.amount || 0);
+  const currencySymbol = process.env.CURRENCY_SYMBOL || '$';
   const runtimeFormatted = formatDuration(movie?.runtime);
   const genres = Array.isArray(movie?.genres) 
     ? movie.genres.map(g => (typeof g === 'object' ? g.name : g)).join(' • ')
@@ -169,10 +170,10 @@ export function generateBookingTicketEmail({ booking, user, movie, show }) {
                 </tr>
                 <tr>
                   <td style="padding:10px 0 4px 0;font-size:13px;color:#94A3B8;">
-                    ${seats.length} x Ticket (₹${unitPrice} each)
+                    ${seats.length} x Ticket (${currencySymbol}${unitPrice} each)
                   </td>
                   <td align="right" style="padding:10px 0 4px 0;font-size:13px;color:#E2E8F0;font-weight:600;">
-                    ₹${totalAmount}
+                    ${currencySymbol}${totalAmount}
                   </td>
                 </tr>
                 <tr>
@@ -188,7 +189,7 @@ export function generateBookingTicketEmail({ booking, user, movie, show }) {
                     Total Paid
                   </td>
                   <td align="right" style="padding-top:10px;border-top:1px solid #1E293B;font-size:18px;font-weight:900;color:#10B981;">
-                    ₹${totalAmount}
+                    ${currencySymbol}${totalAmount}
                   </td>
                 </tr>
               </table>
@@ -238,7 +239,7 @@ Booking ID: ${bookingId}
 Date: ${dateFormatted}
 Time: ${timeFormatted}
 Seats (${seats.length}): ${seatsList}
-Total Paid: ₹${totalAmount} (via Stripe)
+Total Paid: ${currencySymbol}${totalAmount} (via Stripe)
 
 Entry Instructions:
 Please arrive 15 minutes prior to the show. Present this email or Booking ID at the cinema counter.
