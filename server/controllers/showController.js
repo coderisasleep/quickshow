@@ -89,9 +89,14 @@ export const getShows = async(req,res) =>{
 
     // Exclude sold-out shows (theater capacity = 90) and filter unique movies
     const availableShows = shows.filter(show => Object.keys(show.occupiedSeats || {}).length < 90);
-    const uniqueShows = new Set(availableShows.map(show => show.movie));
+    const movieMap = new Map();
+    availableShows.forEach(show => {
+      if (show.movie?._id && !movieMap.has(show.movie._id.toString())) {
+        movieMap.set(show.movie._id.toString(), show.movie);
+      }
+    });
     
-    res.json({success:true, shows: Array.from(uniqueShows)})
+    res.json({success:true, shows: Array.from(movieMap.values())})
   } catch(error){
     console.error(error);
     res.json({success:false, message: error.message});
@@ -102,6 +107,11 @@ export const getShows = async(req,res) =>{
 export const getShow = async(req,res) =>{
   try{
      const {movieId} = req.params;
+     const movie = await Movie.findById(movieId);
+     if (!movie) {
+       return res.json({success:false, message: "Movie not found"});
+     }
+
      //get all upcoming shows for the movie
      const shows = await Show.find({
        movie: movieId,
@@ -109,7 +119,6 @@ export const getShow = async(req,res) =>{
        isDeleted: { $ne: true }
      });
 
-     const movie = await Movie.findById(movieId);
      const dateTime ={};
 
      shows.forEach((show)=>{
@@ -122,6 +131,15 @@ export const getShow = async(req,res) =>{
       }
       dateTime[date].push({time:show.showDateTime, showId: show._id})
      })
+
+     if (Object.keys(dateTime).length === 0) {
+       return res.json({
+         success: false,
+         message: "No active shows available for this movie",
+         movie: null,
+         dateTime: {}
+       });
+     }
 
      res.json({success:true, movie, dateTime})
   }catch(error){

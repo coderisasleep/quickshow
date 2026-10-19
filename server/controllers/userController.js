@@ -1,6 +1,7 @@
 import { clerkClient } from "@clerk/express";
 import Booking from "../model/Booking.js";
 import Movie from "../model/Movie.js";
+import Show from "../model/Show.js";
 
 //API Controller function to get user bookings
 export const getUserBookings = async(req,res) =>{
@@ -63,8 +64,26 @@ export const getFavourites = async(req,res) =>{
        const favourites = Array.isArray(user.privateMetadata?.favourites)
          ? user.privateMetadata.favourites
          : []
+
+       if(favourites.length === 0){
+         return res.json({success:true, movies: []})
+       }
+
+       // Only include favourite movies with active, non-deleted, non-sold-out shows
+       const activeShows = await Show.find({
+         movie: { $in: favourites },
+         showDateTime: { $gte: new Date() },
+         isDeleted: { $ne: true }
+       });
+
+       const activeMovieIds = new Set(
+         activeShows
+           .filter(s => Object.keys(s.occupiedSeats || {}).length < 90)
+           .map(s => s.movie.toString())
+       );
+
        //getting movies from database
-       const movies = await Movie.find({_id: {$in: favourites} })
+       const movies = await Movie.find({_id: {$in: Array.from(activeMovieIds)} })
 
        res.json({success:true , movies})
 

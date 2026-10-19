@@ -9,7 +9,7 @@ import toast from "react-hot-toast";
 
 const AddShow = () =>{
 
-    const {axios,getToken, user, image_base_url} = useAppContext()
+    const {axios,getToken, user, image_base_url, fetchShows} = useAppContext()
 
     const currency = import.meta.env.VITE_CURRENCY
     const [nowPlayingMovies,setNowPlayingMovies] = useState([]);
@@ -93,6 +93,9 @@ const AddShow = () =>{
             setSelectedMovie(null)
             setDateTimeSelection({})
             setShowPrice("")
+            if (typeof fetchShows === 'function') {
+              await fetchShows();
+            }
           }else{
             toast.error(data.message)
           }

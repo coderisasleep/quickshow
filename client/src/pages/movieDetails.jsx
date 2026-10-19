@@ -39,14 +39,20 @@ const MovieDetails = () => {
             try {
                 const {data} = await axios.get(`/api/show/${id}`)
                 if(isActive){
+                    const hasActiveShows = Boolean(
+                        data.success &&
+                        data.movie &&
+                        data.dateTime &&
+                        Object.keys(data.dateTime).length > 0
+                    );
                     setShowResult({
                         id,
-                        show: data.success && data.movie
+                        show: hasActiveShows
                             ? {movie: data.movie, dateTime: data.dateTime}
                             : null,
-                        error: data.success && data.movie
+                        error: hasActiveShows
                             ? null
-                            : data.message || 'Movie details are not available.'
+                            : data.message || 'No active shows available for this movie.'
                     })
                 }
             } catch (error) {
@@ -74,8 +80,8 @@ const MovieDetails = () => {
     if(!show){
         return (
             <main className="flex min-h-screen flex-col items-center justify-center gap-5 px-6 text-center">
-                <p>{showResult?.error || 'Movie details are not available.'}</p>
-                <button onClick={()=>navigate('/movies')} className="rounded-md bg-primary px-8 py-3 text-sm font-medium">
+                <p className="text-gray-300 text-lg">{showResult?.error || 'No active shows available for this movie.'}</p>
+                <button onClick={()=>navigate('/movies')} className="rounded-md bg-primary hover:bg-primary-dull transition px-8 py-3 text-sm font-medium cursor-pointer">
                     Browse Movies
                 </button>
             </main>

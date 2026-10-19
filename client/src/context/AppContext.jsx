@@ -149,6 +149,7 @@ export const AppProvider = ({ children }) =>{
         axios:api,
         fetchIsAdmin,
         user,isClerkLoaded,getToken,navigate,isAdmin,isLoadingAdmin,adminCheckError,shows,isLoadingShows,
+        fetchShows,
         favouriteMovies,fetchFavouriteMovies,image_base_url
     }
     

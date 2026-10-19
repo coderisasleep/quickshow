@@ -7,7 +7,7 @@ import { useAppContext } from "../../context/AppContext";
 import toast from "react-hot-toast";
 
 const DeleteShow = () => {
-    const { axios, getToken, user, image_base_url } = useAppContext();
+    const { axios, getToken, user, image_base_url, fetchShows } = useAppContext();
     const currency = import.meta.env.VITE_CURRENCY;
 
     const [shows, setShows] = useState([]);
@@ -77,6 +77,9 @@ const DeleteShow = () => {
                 toast.success(data.message || "Show listing(s) deleted successfully");
                 setSelectedShowIds([]);
                 await fetchAllShows();
+                if (typeof fetchShows === 'function') {
+                    await fetchShows();
+                }
             } else {
                 toast.error(data.message || "Failed to delete show listing(s)");
             }

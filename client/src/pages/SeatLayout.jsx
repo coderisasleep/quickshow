@@ -79,11 +79,18 @@ const SeatLayout = () => {
     const fetchShow = async () =>{
       try {
         const {data} = await axios.get(`/api/show/${id}`)
-        if(isActive && data.success){
+        if(isActive && data.success && data.dateTime && Object.keys(data.dateTime).length > 0){
           setShow(data)
+        } else if (isActive) {
+          toast.error(data.message || 'No active shows available for this movie')
+          navigate('/movies')
         }
       } catch (error) {
         console.error(error)
+        if (isActive) {
+          toast.error('Unable to load show')
+          navigate('/movies')
+        }
       }
     }
 
@@ -91,7 +98,7 @@ const SeatLayout = () => {
     return () => {
       isActive = false
     }
-  },[axios,id])
+  },[axios,id,navigate])
 
   useEffect(()=>{
     if(!selectedTime){
