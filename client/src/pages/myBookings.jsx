@@ -115,14 +115,14 @@ const MyBookings = () => {
             {bookings.map((item,index)=>(
                 <div key={index} className='flex flex-col sm:flex-row sm:items-stretch justify-between bg-primary/8 border border-primary/20 rounded-lg mt-4 p-2 max-w-3xl'>
                       <div className='flex min-w-0 flex-1 flex-col sm:flex-row'>
-                           <img src={image_base_url + item.show.movie.poster_path} alt="" className='w-full sm:w-44 sm:shrink-0 aspect-video h-auto object-cover object-bottom rounded'/>
+                           <img src={item.show?.movie?.poster_path ? (image_base_url + item.show.movie.poster_path) : ''} alt="" className='w-full sm:w-44 sm:shrink-0 aspect-video h-auto object-cover object-bottom rounded bg-gray-900'/>
                            <div className='flex min-w-0 flex-1 flex-col p-4'>
-                               <p className='text-lg font-semibold'>{item.show.movie.title}</p>
-                               <p className='text-gray-400 text-sm'>{timeFormat(item.show.movie.runtime)}</p>
+                               <p className='text-lg font-semibold'>{item.show?.movie?.title || 'Show Removed'}</p>
+                               <p className='text-gray-400 text-sm'>{item.show?.movie?.runtime ? timeFormat(item.show.movie.runtime) : ''}</p>
                                <div className='flex flex-wrap items-center gap-x-4 gap-y-2 mt-auto pt-3 text-gray-400 text-sm'>
                                    <p className='flex items-center gap-1.5'>
                                     <CalendarDays className='w-4 h-4' />
-                                       {dateFormat(item.show.showDateTime)} 
+                                       {item.show?.showDateTime ? dateFormat(item.show.showDateTime) : 'N/A'} 
                                    </p>
                                </div>
                            </div>

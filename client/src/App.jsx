@@ -13,6 +13,7 @@ import { dummyShowsData } from './assets/assets'
 import Layout from './pages/admin/Layout'
 import Dashboard from './pages/admin/Dashboard'
 import AddShow from './pages/admin/AddShow'
+import DeleteShow from './pages/admin/DeleteShow'
 import ListShow from './pages/admin/ListShows'
 import ListBookings from './pages/admin/ListBookings'
 import { useAppContext } from './context/AppContext'
@@ -49,6 +50,7 @@ const App = () => {
       )}>
        <Route index element={<Dashboard/>}/>
        <Route path="add-show" element={<AddShow/>}></Route>
+       <Route path="delete-show" element={<DeleteShow/>}></Route>
        <Route path="list-shows" element={<ListShow/>}></Route>
        <Route path='list-bookings' element={<ListBookings/>}></Route>
       </Route>
