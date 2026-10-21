@@ -13,7 +13,7 @@ const AdminSidebar = () =>{
         {name:'Add Shows',path:'/admin/add-show', icon: PlusSquareIcon},
         {name:'Delete Shows',path:'/admin/delete-show', icon: Trash2Icon},
         {name:'List Shows',path:'/admin/list-shows',icon:ListIcon},
-        {name:'list Bookings',path:'/admin/list-bookings',icon:ListCollapseIcon}
+        {name:'List Bookings',path:'/admin/list-bookings',icon:ListCollapseIcon}
     ]
 
     return (

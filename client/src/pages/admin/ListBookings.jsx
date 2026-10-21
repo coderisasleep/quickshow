@@ -35,29 +35,36 @@ const ListBookings = () =>{
 
     return !isLoading ? (
         <>
-        <Title text1="list" text2="Bookings"/>
-        <div className="max-w-4xl mt-6 overflow-x-auto">
-            <table className="w-full border-collapse rounded-md overflow-hidden text-nowrap">
+        <Title text1="List" text2="Bookings"/>
+        <div className="max-w-5xl mt-6 overflow-x-auto rounded-xl border border-gray-700/60 bg-gray-900/40 shadow-xl backdrop-blur-xs">
+            <table className="w-full border-collapse text-left text-nowrap">
              <thead>
-                <tr className="bg-primary/20 text-left text-white">
-                   <th className="p-2 font-medium pl-5">User Name</th>
-                   <th className="p-2 font-medium">Movie Name</th>
-                   <th className="p-2 font-medium">Show Time</th>
-                   <th className="p-2 font-medium">Seats</th>
-                   <th className="p-2 font-medium">Amount</th>
+                <tr className="border-b border-gray-700/60 bg-gray-800/80 text-xs font-semibold uppercase tracking-wider text-gray-300">
+                   <th className="px-6 py-3.5">User Name</th>
+                   <th className="px-6 py-3.5">Movie Name</th>
+                   <th className="px-6 py-3.5">Show Time</th>
+                   <th className="px-6 py-3.5">Seats</th>
+                   <th className="px-6 py-3.5">Amount</th>
                 </tr>
             </thead>
-            <tbody className="text-sm font-light">
-                            {bookings.map((item,index)=>(
-                                <tr key={index} className="border-b border-primary/20 bg-primary/5 even:bg-primary/10">
-                                    <td className="p-2 min-w-45 pl-5">{item.user?.name || "User"}</td>
-                                    <td className="p-2">{item.show?.movie?.title || "Show Removed"}</td>
-                                    <td className="p-2">{item.show?.showDateTime ? dateFormat(item.show.showDateTime) : "N/A"}</td>
-                                    <td className="p-2">{item.bookedSeats ? (Array.isArray(item.bookedSeats) ? item.bookedSeats.join(", ") : Object.values(item.bookedSeats).join(", ")) : ""}</td>
-                                    <td className="p-2">{currency}{item.amount}</td>
-                                </tr>
-            ))}
-            
+            <tbody className="divide-y divide-gray-800/70 text-sm font-normal text-gray-300">
+                {bookings.length > 0 ? (
+                  bookings.map((item,index)=>(
+                    <tr key={index} className="transition-colors hover:bg-white/5">
+                        <td className="px-6 py-3.5 font-medium text-white">{item.user?.name || "User"}</td>
+                        <td className="px-6 py-3.5">{item.show?.movie?.title || "Show Removed"}</td>
+                        <td className="px-6 py-3.5">{item.show?.showDateTime ? dateFormat(item.show.showDateTime) : "N/A"}</td>
+                        <td className="px-6 py-3.5">{item.bookedSeats ? (Array.isArray(item.bookedSeats) ? item.bookedSeats.join(", ") : Object.values(item.bookedSeats).join(", ")) : ""}</td>
+                        <td className="px-6 py-3.5 font-medium text-primary">{currency} {item.amount}</td>
+                    </tr>
+                  ))
+                ) : (
+                  <tr>
+                    <td colSpan="5" className="py-10 text-center text-sm text-gray-400">
+                      No bookings recorded yet
+                    </td>
+                  </tr>
+                )}
             </tbody>
             </table>
         </div>
