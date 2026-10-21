@@ -107,9 +107,35 @@ export const getShows = async(req,res) =>{
 export const getShow = async(req,res) =>{
   try{
      const {movieId} = req.params;
-     const movie = await Movie.findById(movieId);
+     let movie = await Movie.findById(movieId);
      if (!movie) {
-       return res.json({success:false, message: "Movie not found"});
+       try {
+         const [movieDetailsResponse, movieCreditsResponse] = await Promise.all([
+           tmdbClient.get(`/movie/${movieId}`),
+           tmdbClient.get(`/movie/${movieId}/credits`)
+         ]);
+
+         const movieApiData = movieDetailsResponse.data;
+         const movieCreditsData = movieCreditsResponse.data;
+
+         movie = {
+           _id: movieId,
+           title: movieApiData.title,
+           overview: movieApiData.overview,
+           poster_path: movieApiData.poster_path,
+           backdrop_path: movieApiData.backdrop_path,
+           genres: movieApiData.genres || [],
+           casts: movieCreditsData.cast || [],
+           release_date: movieApiData.release_date,
+           original_language: movieApiData.original_language,
+           tagline: movieApiData.tagline || "",
+           vote_average: movieApiData.vote_average,
+           runtime: movieApiData.runtime,
+         };
+       } catch (tmdbError) {
+         console.error('TMDB fetch error in getShow:', tmdbError.message);
+         return res.json({success: false, message: "Movie not found"});
+       }
      }
 
      //get all upcoming shows for the movie
@@ -130,18 +156,16 @@ export const getShow = async(req,res) =>{
         dateTime[date]=[]
       }
       dateTime[date].push({time:show.showDateTime, showId: show._id})
-     })
+     });
 
-     if (Object.keys(dateTime).length === 0) {
-       return res.json({
-         success: false,
-         message: "No active shows available for this movie",
-         movie: null,
-         dateTime: {}
-       });
-     }
+     const hasActiveShows = Object.keys(dateTime).length > 0;
 
-     res.json({success:true, movie, dateTime})
+     res.json({
+       success: true,
+       movie,
+       dateTime,
+       hasActiveShows
+     });
   }catch(error){
      console.error(error);
      res.json({success:false, message:error.message});

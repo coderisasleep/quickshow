@@ -126,6 +126,33 @@ export const AppProvider = ({ children }) =>{
         }
     }
 
+    const toggleFavourite = async (movieId) => {
+        try {
+            if (!user) {
+                toast.error("Please login to mark favourites")
+                return false
+            }
+            const token = await getToken()
+            const { data } = await api.post(
+                '/api/user/update-favourite',
+                { movieId: movieId.toString() },
+                { headers: { Authorization: `Bearer ${token}` } }
+            )
+            if (data.success) {
+                await fetchFavouriteMovies()
+                toast.success(data.message)
+                return true
+            } else {
+                toast.error(data.message)
+                return false
+            }
+        } catch (error) {
+            console.error("Toggle favourite error:", error)
+            toast.error(error.response?.data?.message || error.message || "Failed to update favourite")
+            return false
+        }
+    }
+
     useEffect(() =>{
         fetchShows()
     },[])
@@ -150,7 +177,7 @@ export const AppProvider = ({ children }) =>{
         fetchIsAdmin,
         user,isClerkLoaded,getToken,navigate,isAdmin,isLoadingAdmin,adminCheckError,shows,isLoadingShows,
         fetchShows,
-        favouriteMovies,fetchFavouriteMovies,image_base_url
+        favouriteMovies,fetchFavouriteMovies,toggleFavourite,image_base_url
     }
     
     return(

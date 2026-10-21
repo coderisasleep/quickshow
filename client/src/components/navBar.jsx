@@ -65,7 +65,7 @@ const navBar = () => {
       <Link onClick={()=>{scrollTo(0,0); setIsOpen(false)}} to={'/'}>Home</Link>
       <Link onClick={()=>{scrollTo(0,0); setIsOpen(false)}} to={'/movies'}>Movies</Link>
       <Link onClick={()=>{scrollTo(0,0); setIsOpen(false)}} to={'/'}>Theatres</Link>
-      <Link onClick={()=>{scrollTo(0,0); setIsOpen(false)}} to={'/'}>Releases</Link>
+      <Link onClick={()=>{scrollTo(0,0); setIsOpen(false)}} to={'/releases'}>Releases</Link>
       {favouriteMovies.length >0 && <Link onClick={()=>{scrollTo(0,0); setIsOpen(false)}} to={'/favourite'}>Favourites</Link>}
       {isAdmin && <Link onClick={()=>{scrollTo(0,0); setIsOpen(false)}} to={'/admin'}>Admin</Link>}
       </div>

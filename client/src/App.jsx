@@ -6,6 +6,7 @@ import MovieDetails from './pages/movieDetails'
 import SeatLayout from './pages/SeatLayout'
 import MyBookings from './pages/myBookings'
 import Favourite from './pages/favourite'
+import Releases from './pages/releases'
 import { useLocation } from 'react-router-dom'
 import { Toaster } from 'react-hot-toast'
 import Footer from './components/footer'
@@ -37,6 +38,7 @@ const App = () => {
     <Routes>
       <Route path='/' element={<Home/>} />
       <Route path='/movies' element={<Movies/>} />
+      <Route path='/releases' element={<Releases/>} />
       <Route path='/movies/:id' element={<MovieDetails/>} />
       <Route path='/movies/:id/:date' element={<SeatLayout/>} />
       <Route path='/my-bookings' element={<MyBookings/>} />

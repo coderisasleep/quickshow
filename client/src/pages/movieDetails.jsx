@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import BlurCircle from '../components/BlurCircle'
-import { Heart, PlayCircleIcon } from 'lucide-react'
+import { Calendar, Heart, PlayCircleIcon } from 'lucide-react'
 import timeFormat from '../lib/timeFormat'
 import DateSelect from '../components/DateSelect'
 import MovieCard from '../components/MovieCard'
@@ -15,7 +15,7 @@ const MovieDetails = () => {
     const { id } = useParams()
     const [showResult, setShowResult] = useState(null)
 
-    const { shows, axios, getToken, user, fetchFavouriteMovies, favouriteMovies, image_base_url } = useAppContext()
+    const { shows, axios, getToken, user, fetchFavouriteMovies, favouriteMovies, toggleFavourite, image_base_url } = useAppContext()
     const show = showResult?.id === id ? showResult.show : null
     const isLoading = showResult?.id !== id
 
@@ -49,20 +49,21 @@ const MovieDetails = () => {
             try {
                 const {data} = await axios.get(`/api/show/${id}`)
                 if(isActive){
+                    const hasMovie = Boolean(data.success && data.movie);
                     const hasActiveShows = Boolean(
-                        data.success &&
-                        data.movie &&
+                        hasMovie &&
+                        data.hasActiveShows &&
                         data.dateTime &&
                         Object.keys(data.dateTime).length > 0
                     );
                     setShowResult({
                         id,
-                        show: hasActiveShows
-                            ? {movie: data.movie, dateTime: data.dateTime}
+                        show: hasMovie
+                            ? {movie: data.movie, dateTime: data.dateTime || {}, hasActiveShows}
                             : null,
-                        error: hasActiveShows
+                        error: hasMovie
                             ? null
-                            : data.message || 'No active shows available for this movie.'
+                            : data.message || 'Movie details are not available.'
                     })
                 }
             } catch (error) {
@@ -124,9 +125,16 @@ const MovieDetails = () => {
                 cursor-pointer active:scale-95'>
                     <PlayCircleIcon className='w-5 h-5'/>
                     Watch Trailer</button>
-                <a href="#dateSelect" className='px-10 py-3 text-sm bg-primary hover:bg-primary-dull
-                transition rounded-md font-medium cursor-pointer active:scale-95'>Buy Tickets</a>
-                <button onClick={handleFavourite} className='bg-gray-700 p-2.5 rounded-full transition cursor-pointer active:scale-95'><Heart className={`w-5 h-5 ${favouriteMovies.find(movie => movie._id === id) ? 'text-primary fill-primary' : ""} `}/></button>
+                {show.hasActiveShows ? (
+                    <a href="#dateSelect" className='px-10 py-3 text-sm bg-primary hover:bg-primary-dull
+                    transition rounded-md font-medium cursor-pointer active:scale-95'>Buy Tickets</a>
+                ) : (
+                    <span className='px-8 py-3 text-sm bg-primary/20 text-primary border border-primary/40
+                    rounded-md font-semibold select-none'>Coming Soon to Theatres</span>
+                )}
+                <button onClick={() => toggleFavourite(id)} className='bg-gray-700 p-2.5 rounded-full transition cursor-pointer active:scale-95'>
+                    <Heart className={`w-5 h-5 ${favouriteMovies.some(movie => movie._id.toString() === id.toString()) ? 'text-primary fill-primary' : ""} `}/>
+                </button>
              </div>
              <p className='max-w-2xl text-gray-300'>{show.movie.overview}</p>
 
@@ -144,7 +152,27 @@ const MovieDetails = () => {
                 ))}
              </div>
             </div>
-            <DateSelect dateTime={show.dateTime} id={id}/>
+            {show.hasActiveShows ? (
+                <DateSelect dateTime={show.dateTime} id={id}/>
+            ) : (
+                <div className='pt-20'>
+                    <div className='relative flex flex-col items-center justify-center text-center p-10 bg-primary/10 border border-primary/20 rounded-2xl'>
+                        <BlurCircle top='-40px' left='25%'/>
+                        <Calendar className='w-12 h-12 text-primary mb-3' />
+                        <h2 className='text-2xl font-semibold text-white'>Coming Soon to Theatres</h2>
+                        <p className='text-gray-400 mt-2 max-w-lg text-sm leading-relaxed'>
+                            Ticket bookings for this movie have not opened yet. Add it to your favourites to get notified when showtimes are scheduled!
+                        </p>
+                        <button
+                            onClick={() => toggleFavourite(id)}
+                            className='mt-6 flex items-center gap-2 px-6 py-2.5 bg-primary hover:bg-primary-dull transition rounded-md text-sm font-medium cursor-pointer active:scale-95'
+                        >
+                            <Heart className={`w-4 h-4 ${favouriteMovies.some(m => m._id.toString() === id.toString()) ? 'fill-white' : ''}`} />
+                            {favouriteMovies.some(m => m._id.toString() === id.toString()) ? 'In Favourites' : 'Add to Favourites'}
+                        </button>
+                    </div>
+                </div>
+            )}
             <p className='text-lg font-medium mt-20 mb-8'>You May Also Like</p>
             <div className='grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6'>
               {shows.slice(0,4).map((movie)=>(

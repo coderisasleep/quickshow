@@ -2,6 +2,7 @@ import { clerkClient } from "@clerk/express";
 import Booking from "../model/Booking.js";
 import Movie from "../model/Movie.js";
 import Show from "../model/Show.js";
+import { tmdbClient } from "../configs/tmdb.js";
 
 //API Controller function to get user bookings
 export const getUserBookings = async(req,res) =>{
@@ -39,6 +40,39 @@ export const updateFavourite = async(req,res) =>{
             ? [...user.privateMetadata.favourites]
             : []
 
+        const isFavoriting = !favourites.includes(movieId);
+
+        if (isFavoriting) {
+          // If movie is being added to favourites and not in Movie DB, fetch & save it
+          let movie = await Movie.findById(movieId);
+          if (!movie) {
+            try {
+              const [detailsRes, creditsRes] = await Promise.all([
+                tmdbClient.get(`/movie/${movieId}`),
+                tmdbClient.get(`/movie/${movieId}/credits`)
+              ]);
+              const d = detailsRes.data;
+              const c = creditsRes.data;
+              await Movie.create({
+                _id: movieId,
+                title: d.title,
+                overview: d.overview,
+                poster_path: d.poster_path,
+                backdrop_path: d.backdrop_path || d.poster_path,
+                genres: d.genres || [],
+                casts: c?.cast || [],
+                release_date: d.release_date,
+                original_language: d.original_language,
+                tagline: d.tagline || "",
+                vote_average: d.vote_average,
+                runtime: d.runtime || 0,
+              });
+            } catch (tmdbErr) {
+              console.error("TMDB error when favoriting movie:", tmdbErr.message);
+            }
+          }
+        }
+
         const updatedFavourites = favourites.includes(movieId)
             ? favourites.filter(item=> item !== movieId)
             : [...favourites,movieId]
@@ -46,7 +80,7 @@ export const updateFavourite = async(req,res) =>{
         await clerkClient.users.updateUserMetadata(userId,{
             privateMetadata:{...user.privateMetadata,favourites:updatedFavourites}
         })
-        res.json({success:true, message:"Favourite movies updated"})
+        res.json({success:true, message: isFavoriting ? "Added to favourites" : "Removed from favourites"})
     }catch(error){
         console.error(error);
         res.status(500).json({success:false,message:error.message})
@@ -69,25 +103,10 @@ export const getFavourites = async(req,res) =>{
          return res.json({success:true, movies: []})
        }
 
-       // Only include favourite movies with active, non-deleted, non-sold-out shows
-       const activeShows = await Show.find({
-         movie: { $in: favourites },
-         showDateTime: { $gte: new Date() },
-         isDeleted: { $ne: true }
-       });
-
-       const activeMovieIds = new Set(
-         activeShows
-           .filter(s => Object.keys(s.occupiedSeats || {}).length < 90)
-           .map(s => s.movie.toString())
-       );
-
-       //getting movies from database
-       const movies = await Movie.find({_id: {$in: Array.from(activeMovieIds)} })
+       // Getting movies from database
+       const movies = await Movie.find({_id: {$in: favourites} })
 
        res.json({success:true , movies})
-
-
     }catch(error){
         console.error(error);
         res.status(500).json({success:false,message:error.message})
