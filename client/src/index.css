@@ -30,3 +30,13 @@ input::-webkit-inner-spin-button{
     filter: invert(1);
 }
 
+/* Clerk Dark Theme Enhancements */
+.cl-modalBackdrop {
+    background-color: rgba(0, 0, 0, 0.75) !important;
+    backdrop-filter: blur(8px) !important;
+}
+
+.cl-card, .cl-signIn-root, .cl-signUp-root {
+    box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.8) !important;
+}
+

@@ -10,7 +10,8 @@ import Releases from './pages/releases'
 import { useLocation } from 'react-router-dom'
 import { Toaster } from 'react-hot-toast'
 import Footer from './components/footer'
-import { dummyShowsData } from './assets/assets'
+import { assets, dummyShowsData } from './assets/assets'
+import BlurCircle from './components/BlurCircle'
 import Layout from './pages/admin/Layout'
 import Dashboard from './pages/admin/Dashboard'
 import AddShow from './pages/admin/AddShow'
@@ -46,8 +47,20 @@ const App = () => {
 
       <Route path='/favourite' element={<Favourite/>} />
       <Route path='/admin/*' element={!isClerkLoaded ? <Loading/> : user ? <Layout/> : (
-        <div className='min-h-screen flex justify-center items-center'>
-          <SignIn fallbackRedirectUrl={'/admin'}/>
+        <div className='relative min-h-screen flex flex-col justify-center items-center px-4 overflow-hidden bg-[#09090b]'>
+          <BlurCircle top='-50px' left='10%' />
+          <BlurCircle bottom='-50px' right='10%' />
+
+          <div className='mb-6 flex flex-col items-center gap-2 z-10 text-center'>
+            <img src={assets.logo} alt="QuickShow" className='w-40 h-auto' />
+            <span className='text-xs px-3 py-1 rounded-full bg-primary/10 text-primary border border-primary/20 font-medium'>
+              Admin Portal Authentication
+            </span>
+          </div>
+
+          <div className='relative z-10 w-full max-w-md flex justify-center'>
+            <SignIn fallbackRedirectUrl={'/admin'}/>
+          </div>
         </div>
       )}>
        <Route index element={<Dashboard/>}/>
