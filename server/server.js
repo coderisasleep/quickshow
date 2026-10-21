@@ -10,6 +10,7 @@ import bookingRouter from "./routes/bookingRoutes.js";
 import adminRouter from "./routes/adminRoutes.js";
 import userRouter from "./routes/userRoutes.js";
 import { stripeWebhooks } from "./controllers/stripeWebhooks.js";
+import { cleanupEndedShows } from "./utils/showCleanup.js";
 
 const app = express();
 const port = 3000;
@@ -24,6 +25,11 @@ if (!clerkPublishableKey || !clerkSecretKey) {
 }
 
 await connectDB()
+await cleanupEndedShows()
+
+if (process.env.VERCEL !== "1") {
+    setInterval(cleanupEndedShows, 60000);
+}
 
 //Stripe webhooks Route
 app.use('/api/stripe', express.raw({type:'application/json'}),stripeWebhooks)

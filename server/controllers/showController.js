@@ -1,6 +1,7 @@
 import Movie from "../model/Movie.js"
 import Show from "../model/Show.js"
 import { tmdbClient } from "../configs/tmdb.js"
+import { cleanupEndedShows } from "../utils/showCleanup.js"
 
 //API to get now playing movies from TMDB API
 export const getNowPlayingMovies = async (req,res) =>{
@@ -18,6 +19,23 @@ export const getNowPlayingMovies = async (req,res) =>{
 export const addShow = async(req,res) =>{
    try{
       const {movieId, showsInput, showPrice} = req.body
+
+      if (!showsInput || !Array.isArray(showsInput) || showsInput.length === 0) {
+        return res.status(400).json({ success: false, message: "No showtimes provided" });
+      }
+
+      const now = new Date(Date.now() - 60000); // 1-minute margin for network latency
+      for (const show of showsInput) {
+        for (const time of (show.time || [])) {
+          const showDateObj = new Date(`${show.date}T${time}`);
+          if (isNaN(showDateObj.getTime()) || showDateObj < now) {
+            return res.status(400).json({
+              success: false,
+              message: "Cannot schedule shows for past dates or times"
+            });
+          }
+        }
+      }
 
       let movie = await Movie.findById(movieId);
 
@@ -82,13 +100,18 @@ export const addShow = async(req,res) =>{
 // API to get all shows from the database
 export const getShows = async(req,res) =>{
   try{
+    await cleanupEndedShows();
+    const now = new Date();
     const shows = await Show.find({
-      showDateTime: { $gte: new Date() },
       isDeleted: { $ne: true }
     }).populate('movie').sort({showDateTime: 1});
 
-    // Exclude sold-out shows (theater capacity = 90) and filter unique movies
-    const availableShows = shows.filter(show => Object.keys(show.occupiedSeats || {}).length < 90);
+    // Exclude sold-out shows (theater capacity = 90) and ended shows
+    const availableShows = shows.filter(show => {
+      const runtimeMinutes = show.movie?.runtime || 0;
+      const endTime = new Date(show.showDateTime.getTime() + runtimeMinutes * 60000);
+      return endTime > now && Object.keys(show.occupiedSeats || {}).length < 90;
+    });
     const movieMap = new Map();
     availableShows.forEach(show => {
       if (show.movie?._id && !movieMap.has(show.movie._id.toString())) {
@@ -106,6 +129,7 @@ export const getShows = async(req,res) =>{
 // API to get a single show from database
 export const getShow = async(req,res) =>{
   try{
+     await cleanupEndedShows();
      const {movieId} = req.params;
      let movie = await Movie.findById(movieId);
      if (!movie) {
@@ -138,16 +162,20 @@ export const getShow = async(req,res) =>{
        }
      }
 
-     //get all upcoming shows for the movie
+     //get all shows for the movie
      const shows = await Show.find({
        movie: movieId,
-       showDateTime: { $gte: new Date() },
        isDeleted: { $ne: true }
      });
 
+     const now = new Date();
      const dateTime ={};
 
      shows.forEach((show)=>{
+      const runtimeMinutes = movie?.runtime || 0;
+      const endTime = new Date(show.showDateTime.getTime() + runtimeMinutes * 60000);
+      if (now >= endTime) return;
+
       // Auto-exclude sold out show times (90 seats)
       if (Object.keys(show.occupiedSeats || {}).length >= 90) return;
 
@@ -175,14 +203,19 @@ export const getShow = async(req,res) =>{
 // API to get trailers for now showing movies
 export const getNowShowingTrailers = async (req, res) => {
   try {
+    await cleanupEndedShows();
+    const now = new Date();
     const shows = await Show.find({
-      showDateTime: { $gte: new Date() },
       isDeleted: { $ne: true }
     })
       .populate('movie')
       .sort({ showDateTime: 1 });
 
-    const availableShows = shows.filter(show => Object.keys(show.occupiedSeats || {}).length < 90);
+    const availableShows = shows.filter(show => {
+      const runtimeMinutes = show.movie?.runtime || 0;
+      const endTime = new Date(show.showDateTime.getTime() + runtimeMinutes * 60000);
+      return endTime > now && Object.keys(show.occupiedSeats || {}).length < 90;
+    });
 
     const movieMap = new Map();
     availableShows.forEach((s) => {

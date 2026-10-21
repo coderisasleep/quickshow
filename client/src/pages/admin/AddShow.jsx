@@ -40,8 +40,23 @@ const AddShow = () =>{
        }
     };
 
+    const getMinDateTime = () => {
+        const now = new Date();
+        const year = now.getFullYear();
+        const month = String(now.getMonth() + 1).padStart(2, '0');
+        const day = String(now.getDate()).padStart(2, '0');
+        const hours = String(now.getHours()).padStart(2, '0');
+        const minutes = String(now.getMinutes()).padStart(2, '0');
+        return `${year}-${month}-${day}T${hours}:${minutes}`;
+    };
+
     const handleDateTimeAdd = () => {
         if (!dateTimeInput) return;
+        const selectedDate = new Date(dateTimeInput);
+        if (isNaN(selectedDate.getTime()) || selectedDate < new Date()) {
+            toast.error("Cannot add shows for past dates or times");
+            return;
+        }
         const [date,time] = dateTimeInput.split("T");
         if(!date||!time) return;
 
@@ -76,6 +91,15 @@ const AddShow = () =>{
           if(!selectedMovie || Object.keys(dateTimeSelection).length === 0 || !showPrice){
             toast.error('Missing required fields')
             return
+          }
+
+          const now = new Date();
+          const hasPastShow = Object.entries(dateTimeSelection).some(([date, times]) =>
+            times.some(time => new Date(`${date}T${time}`) < now)
+          );
+          if (hasPastShow) {
+            toast.error("One or more selected showtimes have already passed. Please remove them.");
+            return;
           }
 
           const showsInput = Object.entries(dateTimeSelection).map(([date,time])=>({date,time}));
@@ -172,7 +196,7 @@ const AddShow = () =>{
         <div className="mt-6">
           <label className="block text-sm font-medium mb-2">Select Date and Time</label>
           <div className="inline-flex gap-5 border border-gray-600 p-1 pl-3 rounded-lg">
-            <input type="datetime-local" value={dateTimeInput} onChange={(e)=> setDateTimeInput(e.target.value)} className="outline-none rounded-md"/>
+            <input type="datetime-local" min={getMinDateTime()} value={dateTimeInput} onChange={(e)=> setDateTimeInput(e.target.value)} className="outline-none rounded-md"/>
             <button onClick={handleDateTimeAdd} className="bg-primary/80 text-white px-3 py-2 text-sm rounded-lg hover:bg-primary cursor-pointer">
             Add Time
             </button>

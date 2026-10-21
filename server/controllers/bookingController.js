@@ -42,6 +42,15 @@ export const createBooking = async (req,res) =>{
 
        //Get the show details
        const showData = await Show.findById(showId).populate('movie');
+       if(!showData || showData.isDeleted){
+         return res.status(400).json({success:false,message:"This show is no longer available"});
+       }
+
+       const runtimeMinutes = showData.movie?.runtime || 0;
+       const endTime = new Date(showData.showDateTime.getTime() + runtimeMinutes * 60000);
+       if (new Date() >= endTime) {
+         return res.status(400).json({success:false,message:"This show has already ended"});
+       }
 
        //create a new booking
        const booking = await Booking.create({

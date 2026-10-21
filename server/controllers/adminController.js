@@ -1,6 +1,7 @@
 import Booking from "../model/Booking.js";
 import Show from "../model/Show.js";
 import User from "../model/User.js";
+import { cleanupEndedShows } from "../utils/showCleanup.js";
 
 
 //API to check if user is admin
@@ -11,8 +12,15 @@ export const isAdmin = async(req,res)=>{
 //API to get dashboard data
 export const getDashboardData = async(req,res)=>{
     try{
+       await cleanupEndedShows();
+       const now = new Date();
        const bookings = await Booking.find({isPaid:true});
-       const activeShows = await Show.find({showDateTime:{$gte: new Date()}, isDeleted: {$ne: true}}).populate('movie');
+       const shows = await Show.find({isDeleted: {$ne: true}}).populate('movie');
+       const activeShows = shows.filter(show => {
+         const runtimeMinutes = show.movie?.runtime || 0;
+         const endTime = new Date(show.showDateTime.getTime() + runtimeMinutes * 60000);
+         return endTime > now;
+       });
 
        const totalUser = await User.countDocuments();
 
@@ -34,8 +42,15 @@ export const getDashboardData = async(req,res)=>{
 //API to get all shows
 export const getAllShows = async(req,res)=>{
     try{
-        const shows = await Show.find({showDateTime:{$gte: new Date()}, isDeleted: {$ne: true}}).populate('movie').sort({showDateTime: 1});
-        res.json({success:true, shows})
+        await cleanupEndedShows();
+        const now = new Date();
+        const shows = await Show.find({isDeleted: {$ne: true}}).populate('movie').sort({showDateTime: 1});
+        const activeShows = shows.filter(show => {
+          const runtimeMinutes = show.movie?.runtime || 0;
+          const endTime = new Date(show.showDateTime.getTime() + runtimeMinutes * 60000);
+          return endTime > now;
+        });
+        res.json({success:true, shows: activeShows})
     }catch(error){
 
         console.error(error);
