@@ -30,25 +30,54 @@ input::-webkit-inner-spin-button{
     filter: invert(1);
 }
 
-/* Clerk Premium Dark Theming */
+/* Clerk Premium Dark Theming - High Contrast White Text */
 .cl-modalBackdrop {
-    background-color: rgba(0, 0, 0, 0.8) !important;
+    background-color: rgba(0, 0, 0, 0.85) !important;
     backdrop-filter: blur(12px) !important;
 }
 
-.cl-card {
+.cl-card,
+.cl-rootBox,
+.cl-signIn-root,
+.cl-signUp-root {
     background-color: #0f131d !important;
-    border: 1px solid rgba(255, 255, 255, 0.08) !important;
-    box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.9) !important;
+    border: 1px solid rgba(255, 255, 255, 0.12) !important;
+    box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.95) !important;
     border-radius: 1.25rem !important;
+    color: #ffffff !important;
+}
+
+.cl-headerTitle,
+.cl-formHeaderTitle {
+    color: #ffffff !important;
+    font-weight: 700 !important;
+}
+
+.cl-headerSubtitle,
+.cl-formHeaderSubtitle {
+    color: #f3f4f6 !important;
+    opacity: 0.95 !important;
+    font-size: 0.875rem !important;
+    font-weight: 500 !important;
+}
+
+.cl-formFieldLabel {
+    color: #ffffff !important;
+    font-weight: 700 !important;
+    font-size: 0.875rem !important;
 }
 
 .cl-formFieldInput {
     background-color: #090b10 !important;
-    border: 1px solid rgba(255, 255, 255, 0.12) !important;
+    border: 1px solid rgba(255, 255, 255, 0.18) !important;
     color: #ffffff !important;
     border-radius: 0.75rem !important;
+    font-weight: 500 !important;
     transition: all 0.2s ease !important;
+}
+
+.cl-formFieldInput::placeholder {
+    color: #9ca3af !important;
 }
 
 .cl-formFieldInput:focus {
@@ -57,25 +86,40 @@ input::-webkit-inner-spin-button{
 }
 
 .cl-socialButtonsBlockButton {
-    background-color: rgba(255, 255, 255, 0.03) !important;
-    border: 1px solid rgba(255, 255, 255, 0.1) !important;
-    color: #e5e7eb !important;
+    background-color: rgba(255, 255, 255, 0.05) !important;
+    border: 1px solid rgba(255, 255, 255, 0.15) !important;
     border-radius: 0.75rem !important;
     transition: all 0.2s ease !important;
 }
 
 .cl-socialButtonsBlockButton:hover {
-    background-color: rgba(255, 255, 255, 0.08) !important;
-    border-color: rgba(255, 255, 255, 0.2) !important;
+    background-color: rgba(255, 255, 255, 0.12) !important;
+    border-color: rgba(255, 255, 255, 0.3) !important;
+}
+
+.cl-socialButtonsBlockButtonText {
+    color: #ffffff !important;
+    font-weight: 600 !important;
+}
+
+.cl-dividerLine {
+    background-color: rgba(255, 255, 255, 0.15) !important;
+}
+
+.cl-dividerText {
+    color: #ffffff !important;
+    font-weight: 700 !important;
+    font-size: 0.75rem !important;
 }
 
 .cl-formButtonPrimary {
     background-color: #f84565 !important;
     border-radius: 0.75rem !important;
-    font-weight: 700 !important;
+    color: #ffffff !important;
+    font-weight: 800 !important;
     text-transform: uppercase !important;
     letter-spacing: 0.05em !important;
-    box-shadow: 0 10px 15px -3px rgba(248, 69, 101, 0.3) !important;
+    box-shadow: 0 10px 20px -3px rgba(248, 69, 101, 0.4) !important;
     transition: all 0.2s ease !important;
 }
 
@@ -83,20 +127,36 @@ input::-webkit-inner-spin-button{
     background-color: #d63854 !important;
 }
 
+.cl-footerActionText,
+.cl-footerText,
+.cl-footer span,
+.cl-footer p {
+    color: #ffffff !important;
+    font-weight: 500 !important;
+}
+
 .cl-footerActionLink {
     color: #f84565 !important;
-    font-weight: 600 !important;
+    font-weight: 700 !important;
+    text-decoration: underline !important;
 }
 
 .cl-footerActionLink:hover {
-    color: #d63854 !important;
+    color: #ff6b8b !important;
 }
 
-.cl-dividerLine {
-    background-color: rgba(255, 255, 255, 0.08) !important;
+.cl-identityPreviewText {
+    color: #ffffff !important;
+    font-weight: 700 !important;
 }
 
-.cl-dividerText {
-    color: #6b7280 !important;
+.cl-identityPreviewEditButton {
+    color: #f84565 !important;
+    font-weight: 700 !important;
+}
+
+/* Ensure all nested Clerk text nodes default to high-contrast white */
+.cl-card * {
+    -webkit-font-smoothing: antialiased;
 }
 
