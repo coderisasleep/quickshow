@@ -40,23 +40,28 @@ const AddShow = () =>{
        }
     };
 
-    const getMinDateTime = () => {
-        const now = new Date();
-        const year = now.getFullYear();
-        const month = String(now.getMonth() + 1).padStart(2, '0');
-        const day = String(now.getDate()).padStart(2, '0');
-        const hours = String(now.getHours()).padStart(2, '0');
-        const minutes = String(now.getMinutes()).padStart(2, '0');
-        return `${year}-${month}-${day}T${hours}:${minutes}`;
+    const getStartOfTomorrow = () => {
+        const tomorrow = new Date();
+        tomorrow.setDate(tomorrow.getDate() + 1);
+        tomorrow.setHours(0, 0, 0, 0);
+        return tomorrow;
     };
 
-    const isPastTime = Boolean(dateTimeInput && new Date(dateTimeInput) < new Date());
+    const getMinDateTime = () => {
+        const tomorrow = getStartOfTomorrow();
+        const year = tomorrow.getFullYear();
+        const month = String(tomorrow.getMonth() + 1).padStart(2, '0');
+        const day = String(tomorrow.getDate()).padStart(2, '0');
+        return `${year}-${month}-${day}T00:00`;
+    };
+
+    const isTodayOrPast = Boolean(dateTimeInput && new Date(dateTimeInput) < getStartOfTomorrow());
 
     const handleDateTimeAdd = () => {
         if (!dateTimeInput) return;
         const selectedDate = new Date(dateTimeInput);
-        if (isNaN(selectedDate.getTime()) || selectedDate < new Date()) {
-            toast.error("Cannot add shows for past dates or times");
+        if (isNaN(selectedDate.getTime()) || selectedDate < getStartOfTomorrow()) {
+            toast.error("Shows cannot be scheduled for the current day or past dates. Please select tomorrow or later.");
             return;
         }
         const [date,time] = dateTimeInput.split("T");
@@ -95,12 +100,12 @@ const AddShow = () =>{
             return
           }
 
-          const now = new Date();
-          const hasPastShow = Object.entries(dateTimeSelection).some(([date, times]) =>
-            times.some(time => new Date(`${date}T${time}`) < now)
+          const startOfTomorrow = getStartOfTomorrow();
+          const hasInvalidShow = Object.entries(dateTimeSelection).some(([date, times]) =>
+            times.some(time => new Date(`${date}T${time}`) < startOfTomorrow)
           );
-          if (hasPastShow) {
-            toast.error("One or more selected showtimes have already passed. Please remove them.");
+          if (hasInvalidShow) {
+            toast.error("Shows cannot be scheduled for the current day or past dates. Please select tomorrow or later.");
             return;
           }
 
@@ -200,15 +205,15 @@ const AddShow = () =>{
         </div>
         {/* Date & Time Selection */}
         <div className="mt-6">
-          <label className="block text-sm font-medium mb-2">Select Date and Time</label>
-          <div className={`inline-flex gap-5 border ${isPastTime ? 'border-red-500' : 'border-gray-600'} p-1 pl-3 rounded-lg items-center`}>
+          <label className="block text-sm font-medium mb-2">Select Date and Time (Tomorrow or later)</label>
+          <div className={`inline-flex gap-5 border ${isTodayOrPast ? 'border-red-500' : 'border-gray-600'} p-1 pl-3 rounded-lg items-center`}>
             <input type="datetime-local" min={getMinDateTime()} value={dateTimeInput} onChange={(e)=> setDateTimeInput(e.target.value)} className="outline-none rounded-md"/>
             <button
               type="button"
               onClick={handleDateTimeAdd}
-              disabled={!dateTimeInput || isPastTime}
+              disabled={!dateTimeInput || isTodayOrPast}
               className={`px-3 py-2 text-sm rounded-lg text-white transition ${
-                !dateTimeInput || isPastTime
+                !dateTimeInput || isTodayOrPast
                   ? "bg-gray-600 opacity-50 cursor-not-allowed"
                   : "bg-primary/80 hover:bg-primary cursor-pointer"
               }`}
@@ -216,9 +221,9 @@ const AddShow = () =>{
               Add Time
             </button>
           </div>
-          {isPastTime && (
+          {isTodayOrPast && (
             <p className="text-xs text-red-400 mt-2 flex items-center gap-1 font-medium">
-              <span>⚠️</span> The selected time has already passed. Please select a future time.
+              <span>⚠️</span> Shows cannot be scheduled for the current day or past dates. Please select tomorrow or a later date.
             </p>
           )}
         </div>

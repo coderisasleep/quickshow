@@ -25,15 +25,16 @@ export const addShow = async(req,res) =>{
       }
 
       const now = new Date(Date.now() - 60000); // 1-minute margin for network latency
+      const todayDateStr = new Date().toLocaleDateString('en-CA'); // 'YYYY-MM-DD'
       for (const show of showsInput) {
         for (let i = 0; i < (show.time || []).length; i++) {
           const time = show.time[i];
           const iso = show.isoTimes?.[i];
           const showDateObj = iso ? new Date(iso) : new Date(`${show.date}T${time}`);
-          if (isNaN(showDateObj.getTime()) || showDateObj < now) {
+          if (isNaN(showDateObj.getTime()) || showDateObj < now || show.date <= todayDateStr) {
             return res.status(400).json({
               success: false,
-              message: "Cannot schedule shows for past dates or times"
+              message: "Shows cannot be scheduled for the current day or past dates. Please select tomorrow or a later date."
             });
           }
         }
