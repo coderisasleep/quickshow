@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react"
 import Loading from "../../components/Loading";
 import Title from "./Title";
-import { CheckIcon, StarIcon, CalendarDays } from "lucide-react";
+import { CheckIcon, StarIcon, CalendarDays, AlertTriangle, Trash2 } from "lucide-react";
 import { dateFormat } from "../../lib/dateFormat";
 import { useAppContext } from "../../context/AppContext";
 import toast from "react-hot-toast";
@@ -14,6 +14,7 @@ const DeleteShow = () => {
     const [selectedShowIds, setSelectedShowIds] = useState([]);
     const [isLoading, setIsLoading] = useState(true);
     const [isDeleting, setIsDeleting] = useState(false);
+    const [showConfirmModal, setShowConfirmModal] = useState(false);
     const [error, setError] = useState(null);
 
     const fetchAllShows = async () => {
@@ -56,15 +57,16 @@ const DeleteShow = () => {
         }
     };
 
-    const handleDelete = async () => {
+    const handleDelete = () => {
         if (selectedShowIds.length === 0) {
             toast.error("Please select at least one show listing to delete");
             return;
         }
+        setShowConfirmModal(true);
+    };
 
-        const confirmMsg = `Are you sure you want to delete ${selectedShowIds.length} show listing(s)? Only these specific date/time listings will be removed. Other showtimes for the movie(s) and revenue earned will remain unaffected.`;
-        if (!window.confirm(confirmMsg)) return;
-
+    const confirmDelete = async () => {
+        setShowConfirmModal(false);
         setIsDeleting(true);
         try {
             const { data } = await axios.post(
@@ -352,6 +354,65 @@ const DeleteShow = () => {
 
                 </div>
             </section>
+
+            {/* Confirmation Modal */}
+            {showConfirmModal && (
+                <div
+                    className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm animate-in fade-in duration-200"
+                    onClick={() => setShowConfirmModal(false)}
+                >
+                    <div
+                        className="w-full max-w-md bg-[#10131c] border border-gray-800 rounded-2xl p-6 shadow-2xl relative space-y-5 animate-in zoom-in-95 duration-200"
+                        onClick={(e) => e.stopPropagation()}
+                    >
+                        {/* Icon + Header & 1-Line Severity Message */}
+                        <div className="flex items-start gap-4">
+                            <div className="w-11 h-11 rounded-xl bg-red-500/15 border border-red-500/30 text-red-500 flex items-center justify-center shrink-0 shadow-lg shadow-red-500/10">
+                                <AlertTriangle className="w-6 h-6" />
+                            </div>
+                            <div className="space-y-1">
+                                <h3 className="text-base font-bold text-white tracking-tight leading-snug">
+                                    Permanent Show Cancellation
+                                </h3>
+                                <p className="text-xs text-gray-300 leading-relaxed">
+                                    This will permanently remove the selected showtimes and immediately email refund links to all booked ticket holders.
+                                </p>
+                            </div>
+                        </div>
+
+                        {/* Impact Badge */}
+                        <div className="px-3.5 py-2.5 bg-red-500/10 border border-red-500/20 rounded-xl flex items-center justify-between text-xs">
+                            <span className="text-red-400 font-medium flex items-center gap-1.5">
+                                <span className="inline-block w-1.5 h-1.5 rounded-full bg-red-400 animate-pulse"></span>
+                                Action cannot be undone
+                            </span>
+                            <span className="text-white font-semibold bg-red-600/30 px-2 py-0.5 rounded-md text-[11px]">
+                                {selectedShowIds.length} {selectedShowIds.length === 1 ? 'show' : 'shows'} selected
+                            </span>
+                        </div>
+
+                        {/* Action Buttons */}
+                        <div className="flex items-center justify-end gap-3 pt-2">
+                            <button
+                                type="button"
+                                onClick={() => setShowConfirmModal(false)}
+                                className="px-4 py-2 rounded-xl border border-gray-700/80 bg-gray-900/80 hover:bg-white/5 text-gray-300 text-xs font-semibold transition-all cursor-pointer active:scale-95"
+                            >
+                                Keep Shows
+                            </button>
+                            <button
+                                type="button"
+                                onClick={confirmDelete}
+                                disabled={isDeleting}
+                                className="px-4 py-2 rounded-xl bg-primary hover:bg-primary/90 text-white text-xs font-bold transition-all shadow-lg shadow-primary/25 flex items-center gap-1.5 cursor-pointer active:scale-95 disabled:opacity-50"
+                            >
+                                <Trash2 className="w-3.5 h-3.5" />
+                                <span>Yes, Cancel & Refund</span>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
         </div>
     );
 };
