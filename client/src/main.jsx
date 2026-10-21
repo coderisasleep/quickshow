@@ -46,6 +46,28 @@ const clerkAppearance = {
     alertText: 'text-white text-sm font-medium',
     formHeaderTitle: 'text-white font-bold text-2xl',
     formHeaderSubtitle: 'text-white text-sm font-medium',
+
+    // UserButton Popover Elements
+    userButtonPopoverCard: 'border border-gray-700/80 bg-[#11131a] shadow-2xl shadow-black/95 text-white rounded-2xl',
+    userButtonPopoverMain: 'bg-[#11131a] text-white',
+    userButtonPopoverActions: 'text-white',
+    userButtonPopoverActionButton: 'text-white hover:bg-white/10 transition-colors rounded-xl font-semibold',
+    userButtonPopoverActionButtonText: 'text-white font-semibold text-xs',
+    userButtonPopoverActionButtonIcon: 'text-primary',
+    userButtonPopoverCustomItemButton: 'text-white hover:bg-white/10 transition-colors rounded-xl font-semibold',
+    userButtonPopoverFooter: 'border-t border-gray-800 bg-[#11131a]',
+    userPreview: 'text-white',
+    userPreviewMainIdentifier: 'text-white font-bold text-sm',
+    userPreviewSecondaryIdentifier: 'text-gray-300 text-xs font-medium',
+
+    // UserProfile Modal Elements
+    userProfileRoot: 'bg-[#11131a] text-white',
+    userProfileCard: 'border border-gray-700/80 bg-[#11131a] shadow-2xl shadow-black/95 text-white rounded-2xl',
+    navbar: 'border-r border-gray-800 bg-[#0b0e14]',
+    navbarButton: 'text-gray-300 hover:text-white hover:bg-white/10 font-medium',
+    profileSectionTitleText: 'text-white font-bold text-base',
+    profileSectionContent: 'text-white',
+    accordionTriggerButton: 'text-white font-semibold',
   }
 }
 

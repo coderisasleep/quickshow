@@ -160,3 +160,104 @@ input::-webkit-inner-spin-button{
     -webkit-font-smoothing: antialiased;
 }
 
+/* Clerk UserButton Popover & UserProfile Modal Dark + White Text */
+.cl-userButtonPopoverCard,
+.cl-userButtonPopoverRootBox,
+.cl-userButtonPopoverMain,
+.cl-userProfile-root,
+.cl-userProfile-card {
+    background-color: #11131a !important;
+    border: 1px solid rgba(255, 255, 255, 0.12) !important;
+    color: #ffffff !important;
+    box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.95) !important;
+    border-radius: 1rem !important;
+}
+
+.cl-userPreviewMainIdentifier {
+    color: #ffffff !important;
+    font-weight: 700 !important;
+    font-size: 0.9375rem !important;
+}
+
+.cl-userPreviewSecondaryIdentifier {
+    color: #d1d5db !important;
+    font-size: 0.8125rem !important;
+    font-weight: 500 !important;
+}
+
+.cl-userButtonPopoverActionButton,
+.cl-userButtonPopoverCustomItemButton {
+    color: #ffffff !important;
+    transition: all 0.2s ease !important;
+    border-radius: 0.5rem !important;
+}
+
+.cl-userButtonPopoverActionButton:hover,
+.cl-userButtonPopoverCustomItemButton:hover {
+    background-color: rgba(255, 255, 255, 0.1) !important;
+    color: #ffffff !important;
+}
+
+.cl-userButtonPopoverActionButtonText,
+.cl-userButtonPopoverCustomItemButton span {
+    color: #ffffff !important;
+    font-weight: 600 !important;
+    font-size: 0.8125rem !important;
+}
+
+.cl-userButtonPopoverActionButtonIcon,
+.cl-userButtonPopoverCustomItemButtonIcon,
+.cl-userButtonPopoverCustomItemButton svg {
+    color: #f84565 !important;
+}
+
+.cl-userButtonPopoverFooter,
+.cl-userButtonPopoverFooter * {
+    border-top-color: rgba(255, 255, 255, 0.08) !important;
+    background-color: transparent !important;
+    color: #9ca3af !important;
+}
+
+/* UserProfile Manage Account Modal */
+.cl-navbar {
+    background-color: #0b0e14 !important;
+    border-right: 1px solid rgba(255, 255, 255, 0.08) !important;
+}
+
+.cl-navbarButton {
+    color: #d1d5db !important;
+}
+
+.cl-navbarButton:hover,
+.cl-navbarButton[data-active="true"] {
+    color: #ffffff !important;
+    background-color: rgba(255, 255, 255, 0.08) !important;
+}
+
+.cl-profileSectionTitleText {
+    color: #ffffff !important;
+    font-weight: 700 !important;
+}
+
+.cl-profileSectionContent,
+.cl-profileSectionContent * {
+    color: #ffffff !important;
+}
+
+/* Universal text fallback inside UserButton popover and UserProfile */
+.cl-userButtonPopoverCard p,
+.cl-userButtonPopoverCard span,
+.cl-userButtonPopoverCard h1,
+.cl-userButtonPopoverCard h2,
+.cl-userButtonPopoverCard h3,
+.cl-userButtonPopoverCard button,
+.cl-userProfile-root p,
+.cl-userProfile-root span,
+.cl-userProfile-root label,
+.cl-userProfile-root h1,
+.cl-userProfile-root h2,
+.cl-userProfile-root h3,
+.cl-userProfile-root button {
+    color: #ffffff;
+}
+
