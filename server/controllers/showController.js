@@ -1,5 +1,6 @@
 import Movie from "../model/Movie.js"
 import Show from "../model/Show.js"
+import Booking from "../model/Booking.js"
 import { tmdbClient } from "../configs/tmdb.js"
 import { cleanupEndedShows } from "../utils/showCleanup.js"
 
@@ -302,6 +303,75 @@ export const getMovieTrailer = async (req, res) => {
     return res.json({ success: false, message: "Trailer not available for this movie" });
   } catch (error) {
     console.error(`Error in getMovieTrailer for ${req.params.movieId}:`, error.message);
+    res.status(500).json({ success: false, message: error.message });
+  }
+};
+
+// API to get the featured movie (the movie with the most seats booked among movies added by admin)
+export const getFeaturedMovie = async (req, res) => {
+  try {
+    await cleanupEndedShows();
+
+    // Fetch all active shows populated with movie
+    const shows = await Show.find({ isDeleted: { $ne: true } }).populate('movie');
+
+    if (!shows || shows.length === 0) {
+      const anyMovie = await Movie.findOne().sort({ createdAt: -1 });
+      return res.json({
+        success: true,
+        movie: anyMovie || null,
+        totalBookedSeats: 0
+      });
+    }
+
+    // Map movieId -> stats
+    const movieStats = new Map();
+
+    for (const show of shows) {
+      if (!show.movie || !show.movie._id) continue;
+      const movieId = show.movie._id.toString();
+      const occupiedCount = Object.keys(show.occupiedSeats || {}).length;
+
+      if (!movieStats.has(movieId)) {
+        movieStats.set(movieId, {
+          movie: show.movie,
+          bookedSeatsCount: 0,
+          latestShowDate: new Date(show.showDateTime)
+        });
+      }
+
+      const stat = movieStats.get(movieId);
+      stat.bookedSeatsCount += occupiedCount;
+      if (new Date(show.showDateTime) > stat.latestShowDate) {
+        stat.latestShowDate = new Date(show.showDateTime);
+      }
+    }
+
+    // Sort by bookedSeatsCount descending, then latestShowDate descending
+    const sortedMovies = Array.from(movieStats.values()).sort((a, b) => {
+      if (b.bookedSeatsCount !== a.bookedSeatsCount) {
+        return b.bookedSeatsCount - a.bookedSeatsCount;
+      }
+      return b.latestShowDate - a.latestShowDate;
+    });
+
+    if (sortedMovies.length === 0) {
+      const anyMovie = await Movie.findOne().sort({ createdAt: -1 });
+      return res.json({
+        success: true,
+        movie: anyMovie || null,
+        totalBookedSeats: 0
+      });
+    }
+
+    const featured = sortedMovies[0];
+    return res.json({
+      success: true,
+      movie: featured.movie,
+      totalBookedSeats: featured.bookedSeatsCount
+    });
+  } catch (error) {
+    console.error("Error in getFeaturedMovie:", error.message);
     res.status(500).json({ success: false, message: error.message });
   }
 };

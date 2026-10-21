@@ -12,6 +12,8 @@ export const AppProvider = ({ children }) =>{
     const [isLoadingAdmin, setIsLoadingAdmin] = useState(true)
     const [adminCheckError, setAdminCheckError] = useState(null)
     const [shows, setShows] = useState([])
+    const [featuredMovie, setFeaturedMovie] = useState(null)
+    const [totalBookedSeats, setTotalBookedSeats] = useState(0)
     const [isLoadingShows, setIsLoadingShows] = useState(true)
     const [favouriteMovies,setFavouriteMovies] = useState([])
 
@@ -99,11 +101,20 @@ export const AppProvider = ({ children }) =>{
 
     const fetchShows = async () =>{
         try{
-          const {data} = await api.get('/api/show/all')
-          if(data.success){
-            setShows(data.shows)
-          }else{
-            toast.error(data.message)
+          const [showsRes, featuredRes] = await Promise.allSettled([
+            api.get('/api/show/all'),
+            api.get('/api/show/featured')
+          ]);
+
+          if (showsRes.status === 'fulfilled' && showsRes.value.data.success) {
+            setShows(showsRes.value.data.shows)
+          } else if (showsRes.status === 'fulfilled' && !showsRes.value.data.success) {
+            toast.error(showsRes.value.data.message)
+          }
+
+          if (featuredRes.status === 'fulfilled' && featuredRes.value.data.success) {
+            setFeaturedMovie(featuredRes.value.data.movie)
+            setTotalBookedSeats(featuredRes.value.data.totalBookedSeats || 0)
           }
         }catch(error){
           console.error(error)
@@ -177,6 +188,7 @@ export const AppProvider = ({ children }) =>{
         fetchIsAdmin,
         user,isClerkLoaded,getToken,navigate,isAdmin,isLoadingAdmin,adminCheckError,shows,isLoadingShows,
         fetchShows,
+        featuredMovie,setFeaturedMovie,totalBookedSeats,
         favouriteMovies,fetchFavouriteMovies,toggleFavourite,image_base_url
     }
     
