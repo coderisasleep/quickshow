@@ -50,6 +50,8 @@ const AddShow = () =>{
         return `${year}-${month}-${day}T${hours}:${minutes}`;
     };
 
+    const isPastTime = Boolean(dateTimeInput && new Date(dateTimeInput) < new Date());
+
     const handleDateTimeAdd = () => {
         if (!dateTimeInput) return;
         const selectedDate = new Date(dateTimeInput);
@@ -102,7 +104,11 @@ const AddShow = () =>{
             return;
           }
 
-          const showsInput = Object.entries(dateTimeSelection).map(([date,time])=>({date,time}));
+          const showsInput = Object.entries(dateTimeSelection).map(([date, times]) => ({
+            date,
+            time: times,
+            isoTimes: times.map((t) => new Date(`${date}T${t}`).toISOString()),
+          }));
 
           const payload = {
             movieId: selectedMovie,
@@ -195,12 +201,26 @@ const AddShow = () =>{
         {/* Date & Time Selection */}
         <div className="mt-6">
           <label className="block text-sm font-medium mb-2">Select Date and Time</label>
-          <div className="inline-flex gap-5 border border-gray-600 p-1 pl-3 rounded-lg">
+          <div className={`inline-flex gap-5 border ${isPastTime ? 'border-red-500' : 'border-gray-600'} p-1 pl-3 rounded-lg items-center`}>
             <input type="datetime-local" min={getMinDateTime()} value={dateTimeInput} onChange={(e)=> setDateTimeInput(e.target.value)} className="outline-none rounded-md"/>
-            <button onClick={handleDateTimeAdd} className="bg-primary/80 text-white px-3 py-2 text-sm rounded-lg hover:bg-primary cursor-pointer">
-            Add Time
+            <button
+              type="button"
+              onClick={handleDateTimeAdd}
+              disabled={!dateTimeInput || isPastTime}
+              className={`px-3 py-2 text-sm rounded-lg text-white transition ${
+                !dateTimeInput || isPastTime
+                  ? "bg-gray-600 opacity-50 cursor-not-allowed"
+                  : "bg-primary/80 hover:bg-primary cursor-pointer"
+              }`}
+            >
+              Add Time
             </button>
           </div>
+          {isPastTime && (
+            <p className="text-xs text-red-400 mt-2 flex items-center gap-1 font-medium">
+              <span>⚠️</span> The selected time has already passed. Please select a future time.
+            </p>
+          )}
         </div>
         {/* Display Selected Times */}
         {Object.keys(dateTimeSelection).length > 0 && (

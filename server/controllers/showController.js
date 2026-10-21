@@ -26,8 +26,10 @@ export const addShow = async(req,res) =>{
 
       const now = new Date(Date.now() - 60000); // 1-minute margin for network latency
       for (const show of showsInput) {
-        for (const time of (show.time || [])) {
-          const showDateObj = new Date(`${show.date}T${time}`);
+        for (let i = 0; i < (show.time || []).length; i++) {
+          const time = show.time[i];
+          const iso = show.isoTimes?.[i];
+          const showDateObj = iso ? new Date(iso) : new Date(`${show.date}T${time}`);
           if (isNaN(showDateObj.getTime()) || showDateObj < now) {
             return res.status(400).json({
               success: false,
@@ -72,15 +74,16 @@ export const addShow = async(req,res) =>{
       const showsToCreate = [];
       showsInput.forEach(show =>{
          const showDate = show.date;
-         show.time.forEach((time)=>{
-           const dateTimeString = `${showDate}T${time}`;
+         show.time.forEach((time, idx)=>{
+           const iso = show.isoTimes?.[idx];
+           const showDateObj = iso ? new Date(iso) : new Date(`${showDate}T${time}`);
            showsToCreate.push({
             movie: movieId,
-            showDateTime: new Date(dateTimeString),
+            showDateTime: showDateObj,
             showPrice,
             occupiedSeats: {}
-           })
-         })
+           });
+         });
       });
 
       if(showsToCreate.length>0){
