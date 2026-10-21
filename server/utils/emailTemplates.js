@@ -250,3 +250,175 @@ Support: support@quickshow.com
 
   return { subject, html, text };
 }
+
+export function generateShowCancellationRefundEmail({ booking, user, movie, show }) {
+  const bookingId = booking._id?.toString() || String(booking.id || '');
+  const userName = user?.name || 'Movie Lover';
+  const movieTitle = movie?.title || 'Your Selected Movie';
+  const posterUrl = movie?.poster_path
+    ? (movie.poster_path.startsWith('http')
+      ? movie.poster_path
+      : `https://image.tmdb.org/t/p/w500${movie.poster_path}`)
+    : 'https://images.unsplash.com/photo-1489599849927-2ee91cede3ba?w=500&q=80';
+
+  const showDateTime = show?.showDateTime ? new Date(show.showDateTime) : new Date();
+
+  const dateFormatted = showDateTime.toLocaleDateString('en-IN', {
+    weekday: 'long',
+    year: 'numeric',
+    month: 'short',
+    day: 'numeric',
+    timeZone: 'Asia/Kolkata',
+  });
+
+  const timeFormatted = showDateTime.toLocaleTimeString('en-IN', {
+    hour: '2-digit',
+    minute: '2-digit',
+    hour12: true,
+    timeZone: 'Asia/Kolkata',
+  });
+
+  const seats = Array.isArray(booking?.bookedSeats) ? booking.bookedSeats : [];
+  const seatsList = seats.join(', ') || 'N/A';
+  const seatBadges = seats.map(s => 
+    `<span style="display:inline-block;background:#334155;color:#E2E8F0;padding:4px 10px;margin:2px 4px 2px 0;border-radius:6px;font-size:12px;font-weight:700;">${s}</span>`
+  ).join('');
+
+  const totalAmount = Number(booking.amount || 0);
+  const currencySymbol = process.env.CURRENCY_SYMBOL || '$';
+  const refundUrl = `https://quickshow-refunds.vercel.app/refund?bookingId=${bookingId}&amount=${totalAmount}`;
+
+  const subject = `⚠️ Show Cancelled & Full Refund Notice: "${movieTitle}" [Booking ID: ${bookingId}]`;
+
+  const html = `<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>${subject}</title>
+</head>
+<body style="margin:0;padding:0;background-color:#090D16;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;color:#E2E8F0;-webkit-font-smoothing:antialiased;">
+  <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background-color:#090D16;padding:32px 12px;">
+    <tr>
+      <td align="center">
+        <!-- Main Container -->
+        <table role="presentation" width="100%" style="max-width:540px;background:#131B2E;border:1px solid #1E293B;border-radius:18px;overflow:hidden;box-shadow:0 20px 40px rgba(0,0,0,0.6);" cellpadding="0" cellspacing="0">
+          
+          <!-- Alert Header -->
+          <tr>
+            <td style="background:linear-gradient(135deg, #DC2626 0%, #991B1B 100%);padding:22px 28px;text-align:left;">
+              <table role="presentation" width="100%" cellpadding="0" cellspacing="0">
+                <tr>
+                  <td>
+                    <span style="font-size:20px;font-weight:900;letter-spacing:2px;color:#FFFFFF;text-transform:uppercase;">QUICKSHOW</span>
+                    <div style="font-size:11px;color:#FEE2E2;letter-spacing:1px;text-transform:uppercase;margin-top:2px;">Important Screening Notice</div>
+                  </td>
+                  <td align="right">
+                    <span style="background:rgba(255,255,255,0.2);color:#FFFFFF;padding:5px 12px;border-radius:20px;font-size:11px;font-weight:700;letter-spacing:0.8px;text-transform:uppercase;border:1px solid rgba(255,255,255,0.3);">
+                      CANCELLED
+                    </span>
+                  </td>
+                </tr>
+              </table>
+            </td>
+          </tr>
+
+          <!-- Message Body -->
+          <tr>
+            <td style="padding:24px 28px 12px 28px;">
+              <h2 style="margin:0 0 8px 0;font-size:18px;font-weight:700;color:#F8FAFC;">Hi ${userName},</h2>
+              <p style="margin:0;font-size:14px;color:#94A3B8;line-height:1.6;">
+                We regret to inform you that your upcoming movie screening for <strong style="color:#F1F5F9;">"${movieTitle}"</strong> has been cancelled by cinema management due to schedule changes.
+              </p>
+              <p style="margin:12px 0 0 0;font-size:14px;color:#94A3B8;line-height:1.6;">
+                We sincerely apologize for the inconvenience. A <strong style="color:#22C55E;">100% full refund of ${currencySymbol}${totalAmount}</strong> is guaranteed for your booking.
+              </p>
+            </td>
+          </tr>
+
+          <!-- Cancelled Show Summary -->
+          <tr>
+            <td style="padding:12px 28px 20px 28px;">
+              <table role="presentation" width="100%" style="background:#0F172A;border:1px solid #1E293B;border-radius:12px;overflow:hidden;" cellpadding="0" cellspacing="0">
+                <tr>
+                  <td width="110" style="padding:0;vertical-align:top;">
+                    <img src="${posterUrl}" alt="${movieTitle}" width="110" height="150" style="display:block;width:110px;height:150px;object-fit:cover;" />
+                  </td>
+                  <td style="padding:16px 18px;vertical-align:middle;">
+                    <h3 style="margin:0 0 6px 0;font-size:16px;font-weight:700;color:#FFFFFF;line-height:1.3;">${movieTitle}</h3>
+                    <div style="font-size:12px;color:#94A3B8;margin-bottom:8px;">Booking ID: <strong style="color:#CBD5E1;">${bookingId}</strong></div>
+                    <div style="font-size:12px;color:#94A3B8;margin-bottom:4px;">Date: <strong style="color:#CBD5E1;">${dateFormatted}</strong></div>
+                    <div style="font-size:12px;color:#94A3B8;margin-bottom:8px;">Time: <strong style="color:#CBD5E1;">${timeFormatted}</strong></div>
+                    <div style="font-size:12px;color:#94A3B8;">Seats: ${seatBadges}</div>
+                  </td>
+                </tr>
+              </table>
+            </td>
+          </tr>
+
+          <!-- Refund Card & CTA Button -->
+          <tr>
+            <td style="padding:0 28px 24px 28px;">
+              <table role="presentation" width="100%" style="background:#1E293B;border:1px solid #334155;border-radius:12px;padding:20px;text-align:center;" cellpadding="0" cellspacing="0">
+                <tr>
+                  <td>
+                    <div style="font-size:12px;color:#94A3B8;text-transform:uppercase;letter-spacing:1px;font-weight:600;">Refund Amount</div>
+                    <div style="font-size:28px;font-weight:800;color:#22C55E;margin:6px 0 12px 0;">${currencySymbol}${totalAmount}</div>
+                    <p style="margin:0 0 16px 0;font-size:13px;color:#CBD5E1;line-height:1.5;">
+                      Please click the link below to verify your details and initiate your refund process:
+                    </p>
+                    <a href="${refundUrl}" target="_blank" style="display:inline-block;background:linear-gradient(135deg, #E11D48 0%, #BE123C 100%);color:#FFFFFF;text-decoration:none;font-size:14px;font-weight:700;padding:12px 28px;border-radius:30px;box-shadow:0 4px 12px rgba(225,29,72,0.4);letter-spacing:0.5px;">
+                      Claim / Initiate Refund &rarr;
+                    </a>
+                    <div style="margin-top:14px;font-size:11px;color:#64748B;">
+                      Refund Portal Link: <br/>
+                      <a href="${refundUrl}" style="color:#F43F5E;word-break:break-all;">${refundUrl}</a>
+                    </div>
+                  </td>
+                </tr>
+              </table>
+            </td>
+          </tr>
+
+          <!-- Footer -->
+          <tr>
+            <td style="background:#0F172A;border-top:1px solid #1E293B;padding:20px 28px;text-align:center;">
+              <p style="margin:0 0 6px 0;font-size:12px;color:#64748B;">
+                Questions or issues? Contact our support team at support@quickshow.com
+              </p>
+              <p style="margin:0;font-size:11px;color:#475569;">
+                © ${new Date().getFullYear()} QuickShow Inc. All rights reserved.
+              </p>
+            </td>
+          </tr>
+
+        </table>
+      </td>
+    </tr>
+  </table>
+</body>
+</html>`;
+
+  const text = `QUICKSHOW - SHOW CANCELLED & REFUND NOTICE
+==================================================
+Hi ${userName},
+
+We regret to inform you that your movie screening for "${movieTitle}" has been cancelled by cinema management.
+We apologize for the inconvenience. A full refund of ${currencySymbol}${totalAmount} is guaranteed.
+
+Booking Details:
+- Movie: ${movieTitle}
+- Booking ID: ${bookingId}
+- Date: ${dateFormatted}
+- Time: ${timeFormatted}
+- Seats (${seats.length}): ${seatsList}
+- Refund Amount: ${currencySymbol}${totalAmount}
+
+To claim or initiate your refund, please use the following link:
+${refundUrl}
+
+If you have questions, please contact our support team at support@quickshow.com.
+`;
+
+  return { subject, html, text };
+}

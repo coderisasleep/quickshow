@@ -1,7 +1,10 @@
 import Booking from "../model/Booking.js";
 import Show from "../model/Show.js";
 import User from "../model/User.js";
+import { clerkClient } from "@clerk/express";
 import { cleanupEndedShows } from "../utils/showCleanup.js";
+import sendEmail from "../configs/nodemailer.js";
+import { generateShowCancellationRefundEmail } from "../utils/emailTemplates.js";
 
 
 //API to check if user is admin
@@ -69,12 +72,88 @@ export const deleteShow = async(req,res)=>{
             return res.status(400).json({success:false, message: "Please specify showId or showIds to delete"});
         }
 
+        // Find all paid bookings for these shows before deletion
+        const affectedBookings = await Booking.find({
+            show: { $in: targetIds },
+            isPaid: true
+        }).populate({
+            path: 'show',
+            populate: { path: 'movie' }
+        });
+
+        // Soft delete the shows
         await Show.updateMany(
             { _id: { $in: targetIds } },
             { $set: { isDeleted: true } }
         );
 
-        res.json({success:true, message: "Show(s) deleted successfully"});
+        // Send cancellation and refund emails to affected ticket holders
+        let emailsSentCount = 0;
+        if (affectedBookings.length > 0) {
+            const emailPromises = affectedBookings.map(async (booking) => {
+                try {
+                    let userEmail = null;
+                    let userName = 'Movie Lover';
+
+                    const clerkUserId = typeof booking.user === 'string'
+                        ? booking.user
+                        : (booking.user?._id || booking.user);
+
+                    if (clerkUserId) {
+                        const localUser = await User.findById(clerkUserId);
+                        if (localUser?.email) {
+                            userEmail = localUser.email;
+                            userName = localUser.name || userName;
+                        } else {
+                            try {
+                                const clerkUser = await clerkClient.users.getUser(clerkUserId);
+                                const primaryEmail = clerkUser?.emailAddresses?.find(
+                                    (e) => e.id === clerkUser.primaryEmailAddressId
+                                ) || clerkUser?.emailAddresses?.[0];
+                                userEmail = primaryEmail?.emailAddress;
+                                userName = [clerkUser?.firstName, clerkUser?.lastName].filter(Boolean).join(' ') || clerkUser?.username || userName;
+                            } catch (clerkErr) {
+                                console.error(`[DeleteShow] Clerk lookup failed for ${clerkUserId}:`, clerkErr.message);
+                            }
+                        }
+                    }
+
+                    if (!userEmail) {
+                        console.warn(`[DeleteShow] No email address found for booking ${booking._id}`);
+                        return;
+                    }
+
+                    const show = booking.show;
+                    const movie = show?.movie || { title: "Movie Screening" };
+
+                    const emailContent = generateShowCancellationRefundEmail({
+                        booking,
+                        user: { name: userName, email: userEmail },
+                        movie,
+                        show: show || {}
+                    });
+
+                    await sendEmail({
+                        to: userEmail,
+                        subject: emailContent.subject,
+                        html: emailContent.html,
+                        text: emailContent.text
+                    });
+
+                    emailsSentCount++;
+                } catch (emailErr) {
+                    console.error(`[DeleteShow] Failed to send refund email for booking ${booking._id}:`, emailErr.message);
+                }
+            });
+
+            await Promise.allSettled(emailPromises);
+        }
+
+        const message = affectedBookings.length > 0
+            ? `Show(s) deleted successfully. Refund notice sent to ${emailsSentCount} booked guest(s).`
+            : "Show(s) deleted successfully";
+
+        res.json({ success: true, message, notifiedCount: emailsSentCount });
     }catch(error){
         console.error(error);
         res.status(500).json({success:false, message:error.message});
