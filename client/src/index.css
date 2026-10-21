@@ -30,13 +30,73 @@ input::-webkit-inner-spin-button{
     filter: invert(1);
 }
 
-/* Clerk Dark Theme Enhancements */
+/* Clerk Premium Dark Theming */
 .cl-modalBackdrop {
-    background-color: rgba(0, 0, 0, 0.75) !important;
-    backdrop-filter: blur(8px) !important;
+    background-color: rgba(0, 0, 0, 0.8) !important;
+    backdrop-filter: blur(12px) !important;
 }
 
-.cl-card, .cl-signIn-root, .cl-signUp-root {
-    box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.8) !important;
+.cl-card {
+    background-color: #0f131d !important;
+    border: 1px solid rgba(255, 255, 255, 0.08) !important;
+    box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.9) !important;
+    border-radius: 1.25rem !important;
+}
+
+.cl-formFieldInput {
+    background-color: #090b10 !important;
+    border: 1px solid rgba(255, 255, 255, 0.12) !important;
+    color: #ffffff !important;
+    border-radius: 0.75rem !important;
+    transition: all 0.2s ease !important;
+}
+
+.cl-formFieldInput:focus {
+    border-color: #f84565 !important;
+    box-shadow: 0 0 0 1px #f84565 !important;
+}
+
+.cl-socialButtonsBlockButton {
+    background-color: rgba(255, 255, 255, 0.03) !important;
+    border: 1px solid rgba(255, 255, 255, 0.1) !important;
+    color: #e5e7eb !important;
+    border-radius: 0.75rem !important;
+    transition: all 0.2s ease !important;
+}
+
+.cl-socialButtonsBlockButton:hover {
+    background-color: rgba(255, 255, 255, 0.08) !important;
+    border-color: rgba(255, 255, 255, 0.2) !important;
+}
+
+.cl-formButtonPrimary {
+    background-color: #f84565 !important;
+    border-radius: 0.75rem !important;
+    font-weight: 700 !important;
+    text-transform: uppercase !important;
+    letter-spacing: 0.05em !important;
+    box-shadow: 0 10px 15px -3px rgba(248, 69, 101, 0.3) !important;
+    transition: all 0.2s ease !important;
+}
+
+.cl-formButtonPrimary:hover {
+    background-color: #d63854 !important;
+}
+
+.cl-footerActionLink {
+    color: #f84565 !important;
+    font-weight: 600 !important;
+}
+
+.cl-footerActionLink:hover {
+    color: #d63854 !important;
+}
+
+.cl-dividerLine {
+    background-color: rgba(255, 255, 255, 0.08) !important;
+}
+
+.cl-dividerText {
+    color: #6b7280 !important;
 }
 
