@@ -1,5 +1,6 @@
 import stripe from "stripe"
 import Booking from '../model/Booking.js'
+import Show from '../model/Show.js'
 import { inngest } from '../inngest/index.js'
 
 const markBookingPaid = async(session) =>{
@@ -12,19 +13,37 @@ const markBookingPaid = async(session) =>{
         throw new Error(`Stripe checkout session ${session.id} has no booking ID`)
     }
 
-    const booking = await Booking.findByIdAndUpdate(bookingId,{
-        isPaid:true,
-        paymentLink:""
-    })
+    const booking = await Booking.findById(bookingId);
     if(!booking){
         throw new Error(`Booking ${bookingId} not found for Stripe checkout session ${session.id}`)
     }
 
-    await inngest.send({
-        id: `booking-confirmation-${bookingId}`,
-        name: "app/show.booked",
-        data: {bookingId}
-    })
+    // Only assign seats and trigger confirmation if not already processed (idempotent)
+    if (!booking.isPaid) {
+        booking.isPaid = true;
+        booking.paymentLink = "";
+        await booking.save();
+
+        const showData = await Show.findById(booking.show);
+        if (showData) {
+            showData.occupiedSeats = showData.occupiedSeats || {};
+            booking.bookedSeats.forEach((seat) => {
+                showData.occupiedSeats[seat] = booking.user;
+            });
+            showData.markModified('occupiedSeats');
+
+            if (Object.keys(showData.occupiedSeats || {}).length >= 90) {
+                showData.isDeleted = true;
+            }
+            await showData.save();
+        }
+
+        await inngest.send({
+            id: `booking-confirmation-${bookingId}`,
+            name: "app/show.booked",
+            data: {bookingId}
+        });
+    }
 }
 
 export const stripeWebhooks = async (request, response) =>{

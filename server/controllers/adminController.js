@@ -72,64 +72,97 @@ export const deleteShow = async(req,res)=>{
             return res.status(400).json({success:false, message: "Please specify showId or showIds to delete"});
         }
 
-        // Find all paid bookings for these shows before deletion
+        // 1. Find all bookings matching these shows before deletion
         const affectedBookings = await Booking.find({
-            show: { $in: targetIds },
-            isPaid: true
+            show: { $in: targetIds }
         }).populate({
             path: 'show',
             populate: { path: 'movie' }
         });
 
-        // Soft delete the shows
+        // 2. Also retrieve the shows themselves before soft deleting
+        const showsToDelete = await Show.find({ _id: { $in: targetIds } }).populate('movie');
+
+        // 3. Soft delete the shows
         await Show.updateMany(
             { _id: { $in: targetIds } },
             { $set: { isDeleted: true } }
         );
 
-        // Send cancellation and refund emails to affected ticket holders
+        // Map users to notify: Key = userId
+        const usersToNotify = new Map();
+
+        // Add all users from bookings
+        for (const booking of affectedBookings) {
+            const userId = typeof booking.user === 'string'
+                ? booking.user
+                : (booking.user?._id || booking.user);
+
+            if (userId && !usersToNotify.has(userId)) {
+                usersToNotify.set(userId, {
+                    userKey: userId,
+                    booking,
+                    show: booking.show,
+                    movie: booking.show?.movie || { title: "Movie Screening" }
+                });
+            }
+        }
+
+        // Also check show.occupiedSeats for any user who occupied seats directly
+        for (const show of showsToDelete) {
+            const occupied = show.occupiedSeats || {};
+            for (const [seat, occupant] of Object.entries(occupied)) {
+                if (occupant && !usersToNotify.has(occupant)) {
+                    usersToNotify.set(occupant, {
+                        userKey: occupant,
+                        booking: {
+                            _id: `res-${show._id}-${seat}`,
+                            amount: show.showPrice || 0,
+                            bookedSeats: [seat]
+                        },
+                        show,
+                        movie: show.movie || { title: "Movie Screening" }
+                    });
+                }
+            }
+        }
+
+        // Send cancellation and refund emails to all unique affected ticket holders
         let emailsSentCount = 0;
-        if (affectedBookings.length > 0) {
-            const emailPromises = affectedBookings.map(async (booking) => {
+        let emailErrors = [];
+
+        if (usersToNotify.size > 0) {
+            const emailPromises = Array.from(usersToNotify.values()).map(async ({ booking, userKey, show, movie }) => {
                 try {
                     let userEmail = null;
                     let userName = 'Movie Lover';
 
-                    const clerkUserId = typeof booking.user === 'string'
-                        ? booking.user
-                        : (booking.user?._id || booking.user);
-
-                    if (clerkUserId) {
-                        const localUser = await User.findById(clerkUserId);
-                        if (localUser?.email) {
-                            userEmail = localUser.email;
-                            userName = localUser.name || userName;
-                        } else {
-                            try {
-                                const clerkUser = await clerkClient.users.getUser(clerkUserId);
-                                const primaryEmail = clerkUser?.emailAddresses?.find(
-                                    (e) => e.id === clerkUser.primaryEmailAddressId
-                                ) || clerkUser?.emailAddresses?.[0];
-                                userEmail = primaryEmail?.emailAddress;
-                                userName = [clerkUser?.firstName, clerkUser?.lastName].filter(Boolean).join(' ') || clerkUser?.username || userName;
-                            } catch (clerkErr) {
-                                console.error(`[DeleteShow] Clerk lookup failed for ${clerkUserId}:`, clerkErr.message);
-                            }
+                    const localUser = await User.findById(userKey);
+                    if (localUser?.email) {
+                        userEmail = localUser.email;
+                        userName = localUser.name || userName;
+                    } else {
+                        try {
+                            const clerkUser = await clerkClient.users.getUser(userKey);
+                            const primaryEmail = clerkUser?.emailAddresses?.find(
+                                (e) => e.id === clerkUser.primaryEmailAddressId
+                            ) || clerkUser?.emailAddresses?.[0];
+                            userEmail = primaryEmail?.emailAddress;
+                            userName = [clerkUser?.firstName, clerkUser?.lastName].filter(Boolean).join(' ') || clerkUser?.username || userName;
+                        } catch (clerkErr) {
+                            console.error(`[DeleteShow] Clerk lookup failed for ${userKey}:`, clerkErr.message);
                         }
                     }
 
                     if (!userEmail) {
-                        console.warn(`[DeleteShow] No email address found for booking ${booking._id}`);
+                        console.warn(`[DeleteShow] No email address found for user ${userKey}`);
                         return;
                     }
-
-                    const show = booking.show;
-                    const movie = show?.movie || { title: "Movie Screening" };
 
                     const emailContent = generateShowCancellationRefundEmail({
                         booking,
                         user: { name: userName, email: userEmail },
-                        movie,
+                        movie: movie || { title: "Movie Screening" },
                         show: show || {}
                     });
 
@@ -142,18 +175,27 @@ export const deleteShow = async(req,res)=>{
 
                     emailsSentCount++;
                 } catch (emailErr) {
-                    console.error(`[DeleteShow] Failed to send refund email for booking ${booking._id}:`, emailErr.message);
+                    console.error(`[DeleteShow] Failed to send refund email for user ${userKey}:`, emailErr.message);
+                    emailErrors.push(emailErr.message);
                 }
             });
 
             await Promise.allSettled(emailPromises);
         }
 
-        const message = affectedBookings.length > 0
-            ? `Show(s) deleted successfully. Refund notice sent to ${emailsSentCount} booked guest(s).`
-            : "Show(s) deleted successfully";
+        const totalGuests = usersToNotify.size;
+        let message = "Show(s) deleted successfully";
+        if (totalGuests > 0) {
+            message = `Show(s) deleted successfully. Refund notice sent to ${emailsSentCount} of ${totalGuests} booked guest(s).`;
+        }
 
-        res.json({ success: true, message, notifiedCount: emailsSentCount });
+        res.json({
+            success: true,
+            message,
+            notifiedCount: emailsSentCount,
+            totalGuests,
+            emailErrors: emailErrors.length > 0 ? emailErrors : undefined
+        });
     }catch(error){
         console.error(error);
         res.status(500).json({success:false, message:error.message});

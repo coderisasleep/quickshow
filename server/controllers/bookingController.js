@@ -4,17 +4,33 @@ import Show from "../model/Show.js"
 import stripe from "stripe"
 
 //Function to check availability of selected seats for a movie
-const checkSeatsAvailability = async(showId,selectedSeats)=>{
+const checkSeatsAvailability = async(showId,selectedSeats,excludeBookingId = null)=>{
     try{
-        const showData = await Show.findById(showId)
-        if(!showData) return false;
+        const showData = await Show.findById(showId);
+        if(!showData || showData.isDeleted) return false;
 
-        const occupiedSeats = showData.occupiedSeats;
+        const occupiedSeats = showData.occupiedSeats || {};
 
+        // 1. Check permanently occupied seats
         const isAnySeatTaken = selectedSeats.some(seat=> occupiedSeats[seat]);
-        return !isAnySeatTaken;
+        if (isAnySeatTaken) return false;
+
+        // 2. Check seats held by active unexpired pending bookings (<10 mins)
+        const tenMinutesAgo = new Date(Date.now() - 10 * 60 * 1000);
+        const pendingQuery = {
+            show: showId.toString(),
+            isPaid: false,
+            createdAt: { $gte: tenMinutesAgo },
+            bookedSeats: { $in: selectedSeats }
+        };
+        if (excludeBookingId) {
+            pendingQuery._id = { $ne: excludeBookingId };
+        }
+
+        const activePendingBooking = await Booking.findOne(pendingQuery);
+        return !activePendingBooking;
     }catch(error){
-       console.log(error.message);
+       console.error("checkSeatsAvailability error:", error.message);
        return false;
     }
 }
@@ -60,13 +76,9 @@ export const createBooking = async (req,res) =>{
         bookedSeats:selectedSeats
        })
 
-       selectedSeats.map((seat)=>{
-        showData.occupiedSeats[seat] = userId;
-       })
+       // NOTE: Seats are NOT assigned to showData.occupiedSeats here.
+       // They are only permanently assigned after payment succeeds (in confirmBookingPayment or stripeWebhooks).
 
-       showData.markModified('occupiedSeats');
-
-       await showData.save();
        //Stripe Gateway Initialize
         const stripeInstance = new stripe(process.env.STRIPE_SECRET_KEY) 
 
@@ -84,14 +96,13 @@ export const createBooking = async (req,res) =>{
 
         const session = await stripeInstance.checkout.sessions.create({
             success_url: `${origin}/my-bookings?session_id={CHECKOUT_SESSION_ID}`,
-            cancel_url : `${origin}/my-bookings`,
+            cancel_url : `${origin}/my-bookings?canceled_booking_id=${booking._id.toString()}`,
             line_items: line_items,
             mode:"payment",
             metadata:{
                 bookingId: booking._id.toString()
             },
             expires_at: Math.floor(Date.now()/1000)+30*60, //expires in 30min
-
         })
 
         booking.paymentLink = session.url
@@ -102,9 +113,7 @@ export const createBooking = async (req,res) =>{
             name:"app/checkpayment",
             data:{
                 bookingId: booking._id.toString()
-
             }
-
         })
 
        res.json({success:true, url: session.url})
@@ -143,31 +152,58 @@ export const confirmBookingPayment = async(req,res) =>{
          return res.status(409).json({success:false,message:"Payment has not been completed"})
        }
 
-       booking.isPaid = true
-       booking.paymentLink = ""
-       await booking.save()
+       // Only assign seats and trigger confirmation if not already processed (idempotent)
+       if (!booking.isPaid) {
+           booking.isPaid = true
+           booking.paymentLink = ""
+           await booking.save()
 
-       // Auto-delete show from website if all tickets (90 seats) are sold
-       try {
-         const showData = await Show.findById(booking.show);
-         if (showData && Object.keys(showData.occupiedSeats || {}).length >= 90) {
-           showData.isDeleted = true;
-           await showData.save();
-         }
-       } catch (showCheckErr) {
-         console.error('Error checking show sold-out status:', showCheckErr.message);
+           // Permanently book seats into show.occupiedSeats now that payment succeeded
+           const showData = await Show.findById(booking.show);
+           if (showData) {
+               showData.occupiedSeats = showData.occupiedSeats || {};
+               booking.bookedSeats.forEach((seat) => {
+                   showData.occupiedSeats[seat] = booking.user;
+               });
+               showData.markModified('occupiedSeats');
+
+               // Auto-delete show from website if all tickets (90 seats) are sold
+               if (Object.keys(showData.occupiedSeats || {}).length >= 90) {
+                   showData.isDeleted = true;
+               }
+               await showData.save();
+           }
+
+           await inngest.send({
+             id: `booking-confirmation-${bookingId}`,
+             name: "app/show.booked",
+             data: {bookingId}
+           });
        }
-
-       await inngest.send({
-         id: `booking-confirmation-${bookingId}`,
-         name: "app/show.booked",
-         data: {bookingId}
-       })
 
        res.json({success:true,isPaid:true})
     }catch(error){
         console.error(error)
         res.status(500).json({success:false,message:error.message})
+    }
+}
+
+// Cancel a pending unpaid booking immediately (e.g. when user abandons or cancels Stripe)
+export const cancelPendingBooking = async(req,res) =>{
+    try{
+       const {userId} = req.auth();
+       const {bookingId} = req.body;
+       if(!bookingId){
+         return res.status(400).json({success:false,message:"bookingId is required"});
+       }
+       const booking = await Booking.findOne({_id:bookingId, user:userId, isPaid:false});
+       if(booking){
+         await Booking.findByIdAndDelete(booking._id);
+       }
+       res.json({success:true, message:"Pending booking cancelled successfully"});
+    }catch(error){
+        console.error("cancelPendingBooking error:", error.message);
+        res.status(500).json({success:false, message:error.message});
     }
 }
 
@@ -179,10 +215,20 @@ export const getOccupiedSeats = async(req,res) =>{
          return res.status(404).json({success:false,message:"Show not found"})
        }
 
-       const occupiedSeats = Object.keys(showData.occupiedSeats)
+       const confirmedSeats = Object.keys(showData.occupiedSeats || {});
+
+       // Include active unexpired pending holds (<10 mins) so UI marks them as taken
+       const tenMinutesAgo = new Date(Date.now() - 10 * 60 * 1000);
+       const pendingBookings = await Booking.find({
+           show: showId.toString(),
+           isPaid: false,
+           createdAt: { $gte: tenMinutesAgo }
+       });
+       const pendingSeats = pendingBookings.flatMap(b => b.bookedSeats || []);
+
+       const occupiedSeats = Array.from(new Set([...confirmedSeats, ...pendingSeats]));
 
        res.json({success:true, occupiedSeats})
-
 
     }catch(error){
         console.error(error.message);

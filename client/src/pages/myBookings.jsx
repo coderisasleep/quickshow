@@ -14,6 +14,7 @@ const MyBookings = () => {
     const navigate = useNavigate()
     const [searchParams] = useSearchParams()
     const paymentSessionId = searchParams.get('session_id')
+    const canceledBookingId = searchParams.get('canceled_booking_id')
 
     const [bookings,setBookings] = useState([])
     const[isLoading,setIsLoading] = useState(true)
